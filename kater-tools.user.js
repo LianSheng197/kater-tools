@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.1.1
+// @version      0.1.2
 // @description  Change language.
 // @author       LianSheng
 // @include      https://kater.me*
@@ -14,10 +14,10 @@
 function changeLang() {
     let nowLang = app.data.locale;
     let selectLang = (nowLang == "en") ? "zh-hant" : "en";
-    var yourUID = app.session.user.data.id;
-    var url = `https://kater.me/api/users/${yourUID}`;
-    var token = app.session.csrfToken;
-    var dataObj = {
+    let yourUID = app.session.user.data.id;
+    let url = `https://kater.me/api/users/${yourUID}`;
+    let token = app.session.csrfToken;
+    let dataObj = {
         "data": {
             "type": "users",
             "id": `${yourUID}`,
@@ -29,7 +29,7 @@ function changeLang() {
         }
     };
 
-    var xhr = new XMLHttpRequest();
+    let xhr = new XMLHttpRequest();
     xhr.open("POST", url, true);
     xhr.setRequestHeader("Content-Type", "application/json; charset=UTF-8");
     xhr.setRequestHeader("x-csrf-token", token);
@@ -40,7 +40,7 @@ function changeLang() {
         }
     };
 
-    var data = JSON.stringify(dataObj);
+    let data = JSON.stringify(dataObj);
     xhr.send(data);
 }
 
