@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.1.2
+// @version      0.1.3-force-reload
 // @description  Change language.
 // @author       LianSheng
 // @include      https://kater.me*
@@ -48,6 +48,6 @@ function changeLang() {
     'use strict';
     GM_registerMenuCommand("切換語言", function () {
         changeLang();
-        location.reload();
+        location.reload(true);
     });
 })();
