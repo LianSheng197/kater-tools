@@ -1,11 +1,13 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.1.3-force-reload
+// @version      0.2.0-pa1
 // @description  Change language.
 // @author       LianSheng
 // @include      https://kater.me*
 // @grant        GM_registerMenuCommand
+// @grant        GM_info
+// @require      https://greasyfork.org/scripts/377302-general-source-code-injection-tool/code/General%20Source%20Code%20Injection%20Tool.js?version=667827
 // @compatible   chrome >= 71
 // @license      MIT
 // ==/UserScript==
@@ -44,10 +46,92 @@ function changeLang() {
     xhr.send(data);
 }
 
+function getUserData(uid) {
+    let callback = function () {
+        let code = this.status;
+        let resp = this.responseText;
+        if (code == 200) {
+
+        }
+    }
+
+    function checkData(resp) {
+        let data = resp;
+        console.log("ck404: " + data);
+
+        return data;
+    }
+
+    let get = new XMLHttpRequest();
+    get.addEventListener("loadend", checkData);
+    get.open("GET", `https://kater.me/api/users/${uid}`);
+    get.send();
+
+    return "Get: " + name;
+}
+
 (function () {
     'use strict';
     GM_registerMenuCommand("切換語言", function () {
         changeLang();
         location.reload(true);
     });
+
+    try {
+        // append search by uid
+        let first = true;
+
+        let callback = function (records) {
+            records.map(function (record) {
+                if (record.addedNodes.length != 0) {
+                    try {
+                        let element = document.querySelector("ul.Dropdown-menu.MentionsDropdown");
+                        let search = element.querySelector("mark").innerText;
+                        let re = /(\d+)/;
+                        let userdata = getUserData(search);
+                        let avatar = userdata.data.attributes.avatarUrl;
+                        let avatar_exist = (userdata.data.attributes.avatarUrl != "null");
+                        let name = userdata.data.attributes.displayName;
+
+                        let appendHTML =
+                            `<li class="active" id="search_by_uid"><button class="PostPreview MentionsDropdown-user"><span class="PostPreview-content">${ avatar_exist ? '<img class="Avatar" src="https://kater.me/assets/avatars/dkGhtANlW0vbR1Yu.png>' : '<span class="Avatar" style="background: rgb(160, 229, 195);">???</span>'}<span class="username"><mark>12</mark></span></span></button></li>`;
+
+                        if (search.match(re).length == 2) {
+                            let append = element.querySelector("li#search_by_uid");
+                            let nodelist = record.addedNodes;
+                            let array = Array.apply(null, nodelist);
+
+                            if (document.querySelectorAll("li#search_by_uid").length != 0) {
+                                first = false;
+                            } else {
+                                first = true;
+                            }
+
+                            if (first && (!array.includes(append))) {
+                                console.log(record.addedNodes);
+                                addHTML(appendHTML, "ul.Dropdown-menu.MentionsDropdown", "afterbegin");
+                                added = true;
+                            } else {
+                                if (avatar_exist) {
+                                    append.querySelector("img.Avatar").src = avatar;
+                                } else {
+                                    append.querySelector("img.Avatar").src = avatar;
+                                }
+                            }
+                        }
+                    } catch (e) {}
+                }
+            });
+        }
+
+        let mo = new MutationObserver(callback);
+        let target = document.querySelector("div#composer");
+        let option = {
+            'childList': true,
+            'subtree': true
+        };
+        mo.observe(target, option);
+    } catch (e) {
+        console.log(`ErrorCatcher [Kater Tools v${GM_info.script.version}]: ${e}`);
+    }
 })();
