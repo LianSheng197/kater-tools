@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.2.1
+// @version      0.2.2
 // @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）
 // @author       LianSheng
 // @include      https://kater.me*
@@ -13,7 +13,6 @@
 // ==/UserScript==
 
 // Todo List
-// 0.2.0 overwrite @someone link by uid instead of by name.
 // 0.3.0 Tag someone in article by uid (20%) (delay from v0.2.0-pa1)
 
 // 更改界面語系 (v0.1)
@@ -108,7 +107,9 @@ function postData(url, data) {
     // v0.1: 切換語言
     GM_registerMenuCommand("切換語言", function () {
         changeLang();
-        location.reload(true);
+        setTimeout(function(){
+            location.reload(true);
+        }, 200);
     });
 
     // v0.2: 覆寫提及使用者連結
