@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.2.0-overwrite-user-mention-link
+// @version      0.2.1
 // @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）
 // @author       LianSheng
 // @include      https://kater.me*
@@ -55,7 +55,6 @@ function overwriteUserMention(node) {
     let re = /kater.me\/u\/(.+)$/;
     let name = node.href.match(re)[1];
     node.classList.add("overwrited");
-    console.log(decodeURI(name));
 
     fetch(`https://kater.me/api/users?filter%5Bq%5D=${name}&page%5Blimit%5D=1`)
     .then(function(response) {
