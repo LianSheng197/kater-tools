@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.2.0-pa2
-// @description  Change language.
+// @version      0.2.0-overwrite-user-mention-link
+// @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）
 // @author       LianSheng
 // @include      https://kater.me*
 // @grant        GM_registerMenuCommand
@@ -16,7 +16,7 @@
 // 0.2.0 overwrite @someone link by uid instead of by name.
 // 0.3.0 Tag someone in article by uid (20%) (delay from v0.2.0-pa1)
 
-// 更改界面語系
+// 更改界面語系 (v0.1)
 function changeLang() {
     let nowLang = app.data.locale;
     let selectLang = (nowLang == "en") ? "zh-hant" : "en";
@@ -50,7 +50,22 @@ function changeLang() {
     xhr.send(data);
 }
 
-// for 0.3.0 (incomplete)
+// 覆寫提及使用者連結 (v0.2)
+function overwriteUserMention(node) {
+    let re = /kater.me\/u\/(.+)$/;
+    let name = node.href.match(re)[1];
+    node.classList.add("overwrited");
+    console.log(decodeURI(name));
+
+    fetch(`https://kater.me/api/users?filter%5Bq%5D=${name}&page%5Blimit%5D=1`)
+    .then(function(response) {
+        return response.json();
+    }).then(function(json){
+        node.href = `https://kater.me/u/${json.data[0].id}`;
+    });
+}
+
+// for v0.3 (incomplete)
 function getUserData(uid) {
     let callback = function () {
         let code = this.status;
@@ -75,7 +90,7 @@ function getUserData(uid) {
     return "Get: " + name;
 }
 
-// for 0.3.0 (incomplete)
+// for v0.3 (incomplete)
 function postData(url, data) {
   // Default options are marked with *
   return fetch(url, {
@@ -91,13 +106,27 @@ function postData(url, data) {
 
 (function () {
     'use strict';
+    // v0.1: 切換語言
     GM_registerMenuCommand("切換語言", function () {
         changeLang();
         location.reload(true);
     });
 
-    // for 0.3.0 (incomplete)
+    // v0.2: 覆寫提及使用者連結
+    setInterval(function(){
+        let match_nodes = document.querySelectorAll("a.UserMention:not(.overwrited)");
+        if(match_nodes.length > 0) {
+            match_nodes.forEach(function(node){
+                overwriteUserMention(node);
+            });
+        }
+    }, 100);
+
+    // for 0.3 (incomplete)
     try {
+        // force error (temp)
+        throw "feature is incomplete (v0.3)";
+
         // append search by uid
         let first = true;
 
