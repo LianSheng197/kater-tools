@@ -1,16 +1,20 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.2.0-pa1
+// @version      0.2.0-pa2
 // @description  Change language.
 // @author       LianSheng
 // @include      https://kater.me*
 // @grant        GM_registerMenuCommand
 // @grant        GM_info
 // @require      https://greasyfork.org/scripts/377302-general-source-code-injection-tool/code/General%20Source%20Code%20Injection%20Tool.js?version=667827
-// @compatible   chrome >= 71
+// @compatible   chrome >= 71, firefox >= ??
 // @license      MIT
 // ==/UserScript==
+
+// Todo List
+// 0.2.0 overwrite @someone link by uid instead of by name.
+// 0.3.0 Tag someone in article by uid (20%) (delay from v0.2.0-pa1)
 
 // 更改界面語系
 function changeLang() {
@@ -46,6 +50,7 @@ function changeLang() {
     xhr.send(data);
 }
 
+// for 0.3.0 (incomplete)
 function getUserData(uid) {
     let callback = function () {
         let code = this.status;
@@ -70,6 +75,20 @@ function getUserData(uid) {
     return "Get: " + name;
 }
 
+// for 0.3.0 (incomplete)
+function postData(url, data) {
+  // Default options are marked with *
+  return fetch(url, {
+    body: JSON.stringify(data), // must match 'Content-Type' header
+    headers: {
+      'user-agent': '',
+      'content-type': 'application/json'
+    },
+    method: 'POST', // *GET, POST, PUT, DELETE, etc.
+  })
+  .then(response => response.json()) // 輸出成 json
+}
+
 (function () {
     'use strict';
     GM_registerMenuCommand("切換語言", function () {
@@ -77,6 +96,7 @@ function getUserData(uid) {
         location.reload(true);
     });
 
+    // for 0.3.0 (incomplete)
     try {
         // append search by uid
         let first = true;
