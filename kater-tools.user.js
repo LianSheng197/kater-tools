@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.2.2
+// @version      0.3.0-pa1
 // @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）
 // @author       LianSheng
 // @include      https://kater.me*
@@ -56,50 +56,36 @@ function overwriteUserMention(node) {
     node.classList.add("overwrited");
 
     fetch(`https://kater.me/api/users?filter%5Bq%5D=${name}&page%5Blimit%5D=1`)
-    .then(function(response) {
+        .then(function(response) {
         return response.json();
     }).then(function(json){
         node.href = `https://kater.me/u/${json.data[0].id}`;
     });
 }
 
-// for v0.3 (incomplete)
-function getUserData(uid) {
-    let callback = function () {
-        let code = this.status;
-        let resp = this.responseText;
-        if (code == 200) {
-
-        }
+// 用 UID 提及使用者 (v0.3)
+function mentionUserById(search) {
+    // 原生清單採用添加制，故必須把先前添加的元素先刪除
+    if(document.querySelectorAll(".add_by_userscript").length > 0) {
+        document.querySelectorAll(".add_by_userscript").forEach(function(each){
+            each.remove();
+        });
     }
 
-    function checkData(resp) {
-        let data = resp;
-        console.log("ck404: " + data);
+    try {
+        let re = /^(\d+)$/
+        let uid = search.match(re)[1];
+        console.log(uid);
 
-        return data;
-    }
+        // fetch(`https://kater.me/api/users/${search}`)
+        // let userdata = getUserData(search);
+        // let avatar = userdata.data.attributes.avatarUrl;
+        // let avatar_exist = (userdata.data.attributes.avatarUrl != "null");
+        // let name = userdata.data.attributes.displayName;
 
-    let get = new XMLHttpRequest();
-    get.addEventListener("loadend", checkData);
-    get.open("GET", `https://kater.me/api/users/${uid}`);
-    get.send();
-
-    return "Get: " + name;
-}
-
-// for v0.3 (incomplete)
-function postData(url, data) {
-  // Default options are marked with *
-  return fetch(url, {
-    body: JSON.stringify(data), // must match 'Content-Type' header
-    headers: {
-      'user-agent': '',
-      'content-type': 'application/json'
-    },
-    method: 'POST', // *GET, POST, PUT, DELETE, etc.
-  })
-  .then(response => response.json()) // 輸出成 json
+        let appendHTML = `<div class="add_by_userscript" style="padding-left: 1rem; padding-bottom: 0.5rem;">由 UID 搜尋</div><li class="add_by_userscript"><button class="PostPreview MentionsDropdown-user"><span class="PostPreview-content"><img class="Avatar" src="https://kater.me/assets/avatars/yuLiHEwFFcvaAUzP.png"><span class="username">UID</span></span></button></li><div class="add_by_userscript" style="border-bottom: 2px solid #f00;"></div></div>`;
+        addHTML(appendHTML, "ul.Dropdown-menu.MentionsDropdown", "afterbegin");
+    } catch (e) {}
 }
 
 (function () {
@@ -121,6 +107,30 @@ function postData(url, data) {
             });
         }
     }, 100);
+
+    // v0.3: 用 UID 提及使用者（與原生選單共存）
+    // (重寫) 避免 MutationObserver 無限迴圈問題，改用 setInterval 偵測
+    let markold = "init";
+    let marknew = "init2";
+
+    setInterval(function(){
+        let nodes = document.querySelectorAll("ul.Dropdown-menu.MentionsDropdown");
+
+        if(nodes.length > 0){
+            let node = nodes[0];
+            if(node.querySelectorAll("mark").length > 0){
+                let search = node.querySelector("mark").innerText;
+
+                // 確定搜尋文字是否變更
+                markold = marknew;
+                marknew = search;
+
+                if(node.querySelectorAll(".add_by_userscript").length == 0 || markold != marknew) {
+                    mentionUserById(search);
+                }
+            }
+        }
+    }, 200);
 
     // for 0.3 (incomplete)
     try {
