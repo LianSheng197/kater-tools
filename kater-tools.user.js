@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.3.0-pa1
+// @version      0.3.0-pa2
 // @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）
 // @author       LianSheng
 // @include      https://kater.me*
@@ -13,7 +13,12 @@
 // ==/UserScript==
 
 // Todo List
-// 0.3.0 Tag someone in article by uid (20%) (delay from v0.2.0-pa1)
+// 0.3.0 Tag someone in article by uid (delay from v0.2.0-pa1)
+// 0.4.0 Filter notifications.
+//     - Upvote / Downvote
+//     - Specified user reply
+//     - Specified user tag
+// 0.X.0 Setting sync.
 
 // 更改界面語系 (v0.1)
 function changeLang() {
@@ -56,18 +61,18 @@ function overwriteUserMention(node) {
     node.classList.add("overwrited");
 
     fetch(`https://kater.me/api/users?filter%5Bq%5D=${name}&page%5Blimit%5D=1`)
-        .then(function(response) {
-        return response.json();
-    }).then(function(json){
-        node.href = `https://kater.me/u/${json.data[0].id}`;
-    });
+        .then(function (response) {
+            return response.json();
+        }).then(function (json) {
+            node.href = `https://kater.me/u/${json.data[0].id}`;
+        });
 }
 
 // 用 UID 提及使用者 (v0.3)
 function mentionUserById(search) {
     // 原生清單採用添加制，故必須把先前添加的元素先刪除
-    if(document.querySelectorAll(".add_by_userscript").length > 0) {
-        document.querySelectorAll(".add_by_userscript").forEach(function(each){
+    if (document.querySelectorAll(".add_by_userscript").length > 0) {
+        document.querySelectorAll(".add_by_userscript").forEach(function (each) {
             each.remove();
         });
     }
@@ -75,17 +80,36 @@ function mentionUserById(search) {
     try {
         let re = /^(\d+)$/
         let uid = search.match(re)[1];
-        console.log(uid);
 
-        // fetch(`https://kater.me/api/users/${search}`)
-        // let userdata = getUserData(search);
-        // let avatar = userdata.data.attributes.avatarUrl;
-        // let avatar_exist = (userdata.data.attributes.avatarUrl != "null");
-        // let name = userdata.data.attributes.displayName;
+        // Get user data
+        fetch(`https://kater.me/api/users/${search}`)
+            .then(function (response) {
+                return response.json();
+            }).then(function (json) {
+                let avatar = json.data.attributes.avatarUrl;
+                let avatar_exist = (typeof avatar != typeof null);
+                console.log(avatar_exist);
+                let name = json.data.attributes.displayName;
+                let appendHTML = `<div class="add_by_userscript" style="padding: 0.5rem; user-select: none;">由 UID 搜尋</div><li class="add_by_userscript"><button class="PostPreview MentionsDropdown-user"><span class="PostPreview-content">${ avatar_exist ? '<img class="Avatar" src="' + avatar + '">' : '<span class="Avatar" style="background: #000">無</span>'}<span class="username"><span style="background: #ff0;">[${search}]</span> ${name}</span></span></button></li><div class="add_by_userscript" style="border-bottom: 2px solid #f00;"></div></div>`;
 
-        let appendHTML = `<div class="add_by_userscript" style="padding-left: 1rem; padding-bottom: 0.5rem;">由 UID 搜尋</div><li class="add_by_userscript"><button class="PostPreview MentionsDropdown-user"><span class="PostPreview-content"><img class="Avatar" src="https://kater.me/assets/avatars/yuLiHEwFFcvaAUzP.png"><span class="username">UID</span></span></button></li><div class="add_by_userscript" style="border-bottom: 2px solid #f00;"></div></div>`;
-        addHTML(appendHTML, "ul.Dropdown-menu.MentionsDropdown", "afterbegin");
+                // 避免二次添加
+                if (document.querySelectorAll(".add_by_userscript").length > 0) {
+                    document.querySelectorAll(".add_by_userscript").forEach(function (each) {
+                        each.remove();
+                    });
+                }
+                addHTML(appendHTML, "ul.Dropdown-menu.MentionsDropdown", "afterbegin");
+            });
     } catch (e) {}
+}
+
+function getWord() {
+    var range = window.getSelection().getRangeAt(0);
+    if (range.collapsed) {
+        text = range.startContainer.textContent.substring(0, range.startOffset + 1);
+        return text.split(/\b/g).pop();
+    }
+    return '';
 }
 
 (function () {
@@ -93,16 +117,16 @@ function mentionUserById(search) {
     // v0.1: 切換語言
     GM_registerMenuCommand("切換語言", function () {
         changeLang();
-        setTimeout(function(){
+        setTimeout(function () {
             location.reload(true);
         }, 200);
     });
 
     // v0.2: 覆寫提及使用者連結
-    setInterval(function(){
+    setInterval(function () {
         let match_nodes = document.querySelectorAll("a.UserMention:not(.overwrited)");
-        if(match_nodes.length > 0) {
-            match_nodes.forEach(function(node){
+        if (match_nodes.length > 0) {
+            match_nodes.forEach(function (node) {
                 overwriteUserMention(node);
             });
         }
@@ -111,26 +135,32 @@ function mentionUserById(search) {
     // v0.3: 用 UID 提及使用者（與原生選單共存）
     // (重寫) 避免 MutationObserver 無限迴圈問題，改用 setInterval 偵測
     let markold = "init";
-    let marknew = "init2";
-
-    setInterval(function(){
-        let nodes = document.querySelectorAll("ul.Dropdown-menu.MentionsDropdown");
-
-        if(nodes.length > 0){
-            let node = nodes[0];
-            if(node.querySelectorAll("mark").length > 0){
-                let search = node.querySelector("mark").innerText;
-
-                // 確定搜尋文字是否變更
-                markold = marknew;
-                marknew = search;
-
-                if(node.querySelectorAll(".add_by_userscript").length == 0 || markold != marknew) {
-                    mentionUserById(search);
+    let max_uid = 10000;
+    fetch("https://kater.me/api/users?sort=-joinedAt&page[limit]=1")
+        .then(function (response) {
+            return response.json();
+        }).then(function (json) {
+            max_uid = json.data[0].id;
+        }).then(function () {
+            setInterval(function () {
+                let nodes = document.querySelectorAll("ul.Dropdown-menu.MentionsDropdown");
+                if (nodes.length > 0) {
+                    let node = nodes[0];
+                    if (node.querySelectorAll("mark").length > 0) {
+                        let search = node.querySelector("mark").innerText;
+                        if (node.querySelectorAll(".add_by_userscript").length == 0 || search != markold) {
+                            // 確定搜尋文字是否變更
+                            markold = search;
+                            if (search <= max_uid) {
+                                mentionUserById(search);
+                            }
+                        }
+                    }
                 }
-            }
-        }
-    }, 200);
+            }, 200);
+        });
+
+
 
     // for 0.3 (incomplete)
     try {
