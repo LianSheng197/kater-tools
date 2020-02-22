@@ -1,19 +1,20 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.3.0-pa4
-// @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）
+// @version      0.3.1
+// @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）、用 UID 取得可標註其他使用者的文字
 // @author       LianSheng
 // @include      https://kater.me*
 // @grant        GM_registerMenuCommand
 // @grant        GM_info
 // @require      https://greasyfork.org/scripts/377302-general-source-code-injection-tool/code/General%20Source%20Code%20Injection%20Tool.js?version=667827
+// @require      https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js
 // @compatible   chrome >= 71, firefox >= ??
 // @license      MIT
 // ==/UserScript==
 
 // Todo List
-// 0.3.0 Tag someone in article by uid (delay from v0.2.0-pa1)
+// 0.3.0 Tag someone in article by uid 
 // 0.4.0 Filter notifications.
 //     - Upvote / Downvote
 //     - Specified user reply
@@ -69,7 +70,12 @@ function overwriteUserMention(node) {
 }
 
 // 用 UID 提及使用者 (v0.3)
+// 暫時以僅複製爲解法，使用者需自行貼上（避免一些奇怪問題）
 function mentionUserById(uid) {
+    let footer = document.querySelector("ul.TextEditor-controls.Composer-footer");
+    let display = document.querySelector("div#us_display");
+    let input = document.querySelector("input#us_searchUid")
+    let result = document.querySelector("div#us_result");
     let result_avatar = document.querySelector("div#us_resultAvatar");
     let result_name = document.querySelector("div#us_resultName");
 
@@ -79,15 +85,31 @@ function mentionUserById(uid) {
         let avatar = json.data.attributes.avatarUrl;
         let avatar_exist = (typeof avatar != typeof null);
         let name = json.data.attributes.displayName;
+        let clipboard = new ClipboardJS(result);
 
         if (avatar_exist) {
             result_avatar.style.background = `url("${avatar}")`;
             result_avatar.style.backgroundSize = "contain";
         } else {
-            result_avatar.style.background = "#ddd";
+            result_avatar.style.background = "#ccc";
         }
 
         result_name.innerText = name;
+        result.setAttribute("data-clipboard-text", `@${name}`);
+
+        result.onclick = function () {
+            let textarea = document.querySelector("textarea.FormControl.Composer-flexible");
+            textarea.focus();
+            clipboard.destroy();
+
+            result_avatar.style.background = "#ccc";
+            result_name.innerText = "已複製";
+            setTimeout(function () {
+                input.value = "";
+                result_name.innerText = "Username";
+                display.style.display = "none";
+            }, 1000);
+        }
     });
 }
 
@@ -129,7 +151,7 @@ function mentionUserById(uid) {
                     let display, button;
                     // 自定義搜尋框
                     if (document.querySelectorAll("div#us_display").length == 0) {
-                        let appendDisplay = `<div id="us_display" style="display: inline-block; width: 10rem; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88;">UID 搜尋</div><div><input id="us_searchUid" style="width: 100%;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ddd; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block;">Username</div></td></tr></table></div></div>`;
+                        let appendDisplay = `<div id="us_display" style="cursor: pointer; user-select: none; display: inline-block; width: 10rem; min-width: min-content; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88; font-weight: bold;">用 UID 搜尋要標註的人</div><div><input id="us_searchUid" style="width: 100%; text-align: center;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ccc; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block;">Username</div></td></tr></table></div><input id="us_hiddenInput" style="display: none;"></div>`;
                         addHTML(appendDisplay, "ul.TextEditor-controls.Composer-footer", "beforeend");
                         display = document.querySelector("div#us_display");
                         display.style.display = "none";
@@ -146,13 +168,13 @@ function mentionUserById(uid) {
                                 input.focus();
                             } else {
                                 display.style.display = "none";
-                                document.querySelector("textarea#textarea1").focus();
+                                document.querySelector("textarea.FormControl.Composer-flexible").focus();
                             }
 
                             input.addEventListener("input", function (e) {
                                 input.value = input.value.replace(/[^0-9]/g, "");
                                 let search = parseInt(input.value);
-                                console.log(search <= max_uid);
+
                                 if (search != "") {
                                     if (search <= max_uid) {
                                         mentionUserById(search);
