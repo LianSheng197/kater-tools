@@ -69,38 +69,26 @@ function overwriteUserMention(node) {
 }
 
 // 用 UID 提及使用者 (v0.3)
-function mentionUserById(search) {
-    // 原生清單採用添加制，故必須把先前添加的元素先刪除
-    if (document.querySelectorAll(".add_by_userscript").length > 0) {
-        document.querySelectorAll(".add_by_userscript").forEach(function (each) {
-            each.remove();
-        });
-    }
+function mentionUserById(uid) {
+    let result_avatar = document.querySelector("div#us_resultAvatar");
+    let result_name = document.querySelector("div#us_resultName");
 
-    try {
-        let re = /^(\d+)$/
-        let uid = search.match(re)[1];
+    fetch(`https://kater.me/api/users/${uid}`).then(function (response) {
+        return response.json();
+    }).then(function (json) {
+        let avatar = json.data.attributes.avatarUrl;
+        let avatar_exist = (typeof avatar != typeof null);
+        let name = json.data.attributes.displayName;
 
-        // Get user data
-        fetch(`https://kater.me/api/users/${search}`)
-            .then(function (response) {
-                return response.json();
-            }).then(function (json) {
-                let avatar = json.data.attributes.avatarUrl;
-                let avatar_exist = (typeof avatar != typeof null);
-                console.log(avatar_exist);
-                let name = json.data.attributes.displayName;
-                let appendHTML = `<div class="add_by_userscript" style="padding: 0.5rem; user-select: none;">由 UID 搜尋</div><li class="add_by_userscript"><button class="PostPreview MentionsDropdown-user"><span class="PostPreview-content">${ avatar_exist ? '<img class="Avatar" src="' + avatar + '">' : '<span class="Avatar" style="background: #000">無</span>'}<span class="username"><span style="background: #ff0;">[${search}]</span> ${name}</span></span></button></li><div class="add_by_userscript" style="border-bottom: 2px solid #f00;"></div></div>`;
+        if (avatar_exist) {
+            result_avatar.style.background = `url("${avatar}")`;
+            result_avatar.style.backgroundSize = "contain";
+        } else {
+            result_avatar.style.background = "#ddd";
+        }
 
-                // 避免二次添加
-                if (document.querySelectorAll(".add_by_userscript").length > 0) {
-                    document.querySelectorAll(".add_by_userscript").forEach(function (each) {
-                        each.remove();
-                    });
-                }
-                addHTML(appendHTML, "ul.Dropdown-menu.MentionsDropdown", "afterbegin");
-            });
-    } catch (e) {}
+        result_name.innerText = name;
+    });
 }
 
 (function () {
@@ -134,18 +122,44 @@ function mentionUserById(search) {
             max_uid = json.data[0].id;
         }).then(function () {
             setInterval(function () {
-                let nodes = document.querySelectorAll("ul.Dropdown-menu.MentionsDropdown");
+                // 撰寫貼文框的下方功能列
+                let nodes = document.querySelectorAll("li.TextEditor-toolbar");
                 if (nodes.length > 0) {
                     let node = nodes[0];
-                    if (node.querySelectorAll("mark").length > 0) {
-                        let search = node.querySelector("mark").innerText;
-                        if (node.querySelectorAll(".add_by_userscript").length == 0 || search != markold) {
-                            // 確定搜尋文字是否變更
-                            markold = search;
-                            if (search <= max_uid) {
-                                mentionUserById(search);
+                    let display, button;
+                    // 自定義搜尋框
+                    if (document.querySelectorAll("div#us_display").length == 0) {
+                        let appendDisplay = `<div id="us_display" style="display: inline-block; width: 10rem; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88;">UID 搜尋</div><div><input id="us_searchUid" style="width: 100%;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ddd; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block;">Username</div></td></tr></table></div></div>`;
+                        addHTML(appendDisplay, "ul.TextEditor-controls.Composer-footer", "beforeend");
+                        display = document.querySelector("div#us_display");
+                        display.style.display = "none";
+                    }
+                    // 自定義搜尋按鈕
+                    if (document.querySelectorAll("button#us_tagByUid").length == 0) {
+                        let appendButton = `<button id="us_tagByUid" class="Button Button--icon Button--link hasIcon" type="button" title="用 UID 標註他人" data-original-title="用 UID 標註他人"><i class="icon fas fa-user-tag" style="color: #e88;"></i><span class="Button-label">用 UID 標註他人</span></button>`;
+                        addHTML(appendButton, "li.TextEditor-toolbar", "beforeend");
+                        button = document.querySelector("button#us_tagByUid");
+                        button.addEventListener("click", function (e) {
+                            let input = document.querySelector("input#us_searchUid")
+                            if (display.style.display == "none") {
+                                display.style.display = "inline-block";
+                                input.focus();
+                            } else {
+                                display.style.display = "none";
+                                document.querySelector("textarea#textarea1").focus();
                             }
-                        }
+
+                            input.addEventListener("input", function (e) {
+                                input.value = input.value.replace(/[^0-9]/g, "");
+                                let search = parseInt(input.value);
+                                console.log(search <= max_uid);
+                                if (search != "") {
+                                    if (search <= max_uid) {
+                                        mentionUserById(search);
+                                    }
+                                }
+                            });
+                        });
                     }
                 }
             }, 200);
