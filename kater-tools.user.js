@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.3.0-pa2
+// @version      0.3.0-pa3
 // @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）
 // @author       LianSheng
 // @include      https://kater.me*
@@ -103,15 +103,6 @@ function mentionUserById(search) {
     } catch (e) {}
 }
 
-function getWord() {
-    var range = window.getSelection().getRangeAt(0);
-    if (range.collapsed) {
-        text = range.startContainer.textContent.substring(0, range.startOffset + 1);
-        return text.split(/\b/g).pop();
-    }
-    return '';
-}
-
 (function () {
     'use strict';
     // v0.1: 切換語言
@@ -135,7 +126,7 @@ function getWord() {
     // v0.3: 用 UID 提及使用者（與原生選單共存）
     // (重寫) 避免 MutationObserver 無限迴圈問題，改用 setInterval 偵測
     let markold = "init";
-    let max_uid = 10000;
+    let max_uid = 0;
     fetch("https://kater.me/api/users?sort=-joinedAt&page[limit]=1")
         .then(function (response) {
             return response.json();
@@ -159,68 +150,4 @@ function getWord() {
                 }
             }, 200);
         });
-
-
-
-    // for 0.3 (incomplete)
-    try {
-        // force error (temp)
-        throw "feature is incomplete (v0.3)";
-
-        // append search by uid
-        let first = true;
-
-        let callback = function (records) {
-            records.map(function (record) {
-                if (record.addedNodes.length != 0) {
-                    try {
-                        let element = document.querySelector("ul.Dropdown-menu.MentionsDropdown");
-                        let search = element.querySelector("mark").innerText;
-                        let re = /(\d+)/;
-                        let userdata = getUserData(search);
-                        let avatar = userdata.data.attributes.avatarUrl;
-                        let avatar_exist = (userdata.data.attributes.avatarUrl != "null");
-                        let name = userdata.data.attributes.displayName;
-
-                        let appendHTML =
-                            `<li class="active" id="search_by_uid"><button class="PostPreview MentionsDropdown-user"><span class="PostPreview-content">${ avatar_exist ? '<img class="Avatar" src="https://kater.me/assets/avatars/dkGhtANlW0vbR1Yu.png>' : '<span class="Avatar" style="background: rgb(160, 229, 195);">???</span>'}<span class="username"><mark>12</mark></span></span></button></li>`;
-
-                        if (search.match(re).length == 2) {
-                            let append = element.querySelector("li#search_by_uid");
-                            let nodelist = record.addedNodes;
-                            let array = Array.apply(null, nodelist);
-
-                            if (document.querySelectorAll("li#search_by_uid").length != 0) {
-                                first = false;
-                            } else {
-                                first = true;
-                            }
-
-                            if (first && (!array.includes(append))) {
-                                console.log(record.addedNodes);
-                                addHTML(appendHTML, "ul.Dropdown-menu.MentionsDropdown", "afterbegin");
-                                added = true;
-                            } else {
-                                if (avatar_exist) {
-                                    append.querySelector("img.Avatar").src = avatar;
-                                } else {
-                                    append.querySelector("img.Avatar").src = avatar;
-                                }
-                            }
-                        }
-                    } catch (e) {}
-                }
-            });
-        }
-
-        let mo = new MutationObserver(callback);
-        let target = document.querySelector("div#composer");
-        let option = {
-            'childList': true,
-            'subtree': true
-        };
-        mo.observe(target, option);
-    } catch (e) {
-        console.log(`ErrorCatcher [Kater Tools v${GM_info.script.version}]: ${e}`);
-    }
 })();
