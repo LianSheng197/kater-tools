@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.3.0-pa3
+// @version      0.3.0-pa4
 // @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）
 // @author       LianSheng
 // @include      https://kater.me*
