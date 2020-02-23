@@ -9,7 +9,6 @@
 // @grant        GM_info
 // @require      https://greasyfork.org/scripts/377302-general-source-code-injection-tool/code/General%20Source%20Code%20Injection%20Tool.js?version=667827
 // @require      https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js
-// @require      file:///opt/lampp/htdocs/kater-tools/kater-tools.user.js
 // @compatible   chrome >= 71, firefox >= ??
 // @license      MIT
 // ==/UserScript==
