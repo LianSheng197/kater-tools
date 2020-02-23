@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.3.2
+// @version      0.3.3
 // @description  切換界面語系、覆寫 @某人 的連結（避免找不到資源的錯誤）、用 UID 取得可標註其他使用者的文字
 // @author       LianSheng
 // @include      https://kater.me*
@@ -9,6 +9,7 @@
 // @grant        GM_info
 // @require      https://greasyfork.org/scripts/377302-general-source-code-injection-tool/code/General%20Source%20Code%20Injection%20Tool.js?version=667827
 // @require      https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js
+// @require      file:///opt/lampp/htdocs/kater-tools/kater-tools.user.js
 // @compatible   chrome >= 71, firefox >= ??
 // @license      MIT
 // ==/UserScript==
@@ -34,7 +35,7 @@ function changeLang() {
         }
     };
 
-    fetch(`https://kater.me/api/users/${yourUID}`, {
+    let option = {
         body: JSON.stringify(dataObj),
         headers: {
             'Content-Type': 'application/json; charset=UTF-8',
@@ -42,7 +43,9 @@ function changeLang() {
             'x-http-method-override': 'PATCH'
         },
         method: 'POST'
-    }).then(function(response){
+    }
+
+    fetch(`https://kater.me/api/users/${yourUID}`, option).then(function(response){
         let status = response.status;
         if(status == 200) {
             location.reload(true);
