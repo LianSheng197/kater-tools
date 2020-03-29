@@ -2,6 +2,8 @@
 // @name                Kater Tools (Real Part)
 // @version             0.4.1
 // @description         腳本 Kater Tools 實際程式碼
+// @include             https://kater.me/*
+// @exclude             https://kater.me/api/*
 // @author              LianSheng
 // @license             MIT
 // ==/UserScript==
