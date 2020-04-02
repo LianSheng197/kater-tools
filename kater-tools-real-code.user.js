@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name                Kater Tools (Real Part)
-// @version             0.4.1
+// @version             0.5.0
 // @description         腳本 Kater Tools 實際程式碼
 // @include             https://kater.me/*
 // @exclude             https://kater.me/api/*
@@ -9,8 +9,6 @@
 // ==/UserScript==
 
 (function () {
-	let saveUrl = location.href;
-
 	// 更改界面語系 (v0.1)
 	// 用 fetch 改寫。統一整體腳本風格 (v0.3.2)
 	function changeLang() {
@@ -107,6 +105,120 @@
 		});
 	}
 
+	// 貼上彩色文字 (v0.5)
+	// （暫時只支援單行，多行的話需自行分行...）
+	function pasteColorText(paste_target) {
+		paste_target.addEventListener('paste', handlepaste);
+
+		function handlepaste(e) {
+			let types, pastedData, savedContent;
+
+			// 在 Clipboard API 中支援 'text/html' 格式的瀏覽器 (Chrome, Firefox 22+)
+			if (e && e.clipboardData && e.clipboardData.types && e.clipboardData.getData) {
+				types = e.clipboardData.types;
+
+				if (((types instanceof DOMStringList) && types.contains("text/html")) ||
+					(types.indexOf && types.indexOf('text/html') !== -1)) {
+					pastedData = e.clipboardData.getData('text/html');
+					processPaste(pastedData);
+
+					// 避免預設動作、阻止事件冒泡
+					e.stopPropagation();
+					e.preventDefault();
+
+					return false;
+				}
+			}
+
+			savedContent = document.createDocumentFragment();
+			while (paste_target.childNodes.length > 0) {
+				savedContent.appendChild(paste_target.childNodes[0]);
+			}
+
+			waitForPastedData(paste_target, savedContent);
+			return true;
+		}
+
+		function waitForPastedData(element, savedContent) {
+			// 判斷是否已處理完成，否則等待一段時間後再試一次
+			if (element.childNodes && element.childNodes.length > 0) {
+				var pastedData = element.innerHTML;
+
+				element.innerHTML = "";
+				element.appendChild(savedContent);
+
+				processPaste(pastedData);
+			} else {
+				setTimeout(function () {
+					waitForPastedData(element, savedContent)
+				}, 20);
+			}
+		}
+
+		function processPaste(pastedData) {
+			const regex = /<[^<>\/]+?\ style=\".*?(?<!-)color:(.+?);.*?\">([^<>]+?)<\/.+?>/gm;
+			let m;
+
+			let string = "";
+			while ((m = regex.exec(pastedData)) !== null) {
+				// 避免無限循環
+				if (m.index === regex.lastIndex) {
+					regex.lastIndex++;
+				}
+
+				m.forEach(function (match, groupIndex) {
+					// 顏色代碼
+					if (groupIndex == 1) {
+						// 支援兩種最常用的格式，hsl() 等罕見用法就放生了吧XD
+						if (match.includes("rgb")) {
+							// 格式：rgb(rrr, ggg, bbb)
+							let colors = match.replace(/[^0-9,]/g, "").split(",");
+
+							let hex = "";
+							colors.forEach(function (each) {
+								hex += ("0" + parseInt(each).toString(16)).slice(-2);
+							})
+
+							string += `[color=#${hex}]`;
+						} else {
+							// 預設格式：#rrggbb
+							match = match.replace(" ", "");
+							string += `[color=${match}]`;
+						}
+					}
+					// 要上色的文字
+					if (groupIndex == 2) {
+						string += `${match}[/color]`;
+					}
+				});
+			}
+
+			string = unescape(string);
+			// 避免小括號被解析成連結
+			string = replaceAll(string, "\(", "\\(");
+			string = replaceAll(string, "\)", "\\)");
+
+			// 避免重音符 (backtick) 被解析成程式碼區塊
+			string = replaceAll(string, "`", "\\`");
+			string = replaceAll(string, " ", " ");
+
+			// 替換殘留 HTML Entity （不知道爲什麼 unescape 沒有全部替換）
+			string = replaceAll(string, "&gt;", ">");
+			string = replaceAll(string, "&lt;", "<");
+			string = replaceAll(string, "&amp;", "&");
+
+			paste_target.value = string;
+		}
+
+		function replaceAll(str, find, replace) {
+			function escapeRegExp(string) {
+				return string.replace(/[.*+\-?^${}()|[\]\\]/g, '\\$&');
+			}
+
+			return str.replace(new RegExp(escapeRegExp(find), 'g'), replace);
+		}
+	}
+
 	(function () {
 		'use strict';
 		// v0.1: 切換語言
@@ -176,5 +288,15 @@
 				}
 			}, 200);
 		});
+
+		// v0.5: 解析貼上的彩色文字
+		let id = setInterval(function () {
+			let edit_area = document.querySelectorAll("textarea.FormControl.Composer-flexible");
+			if (edit_area.length > 0) {
+				pasteColorText(edit_area[0]);
+				console.log("v0.5 Add");
+				clearInterval(id);
+			}
+		}, 100)
 	})();
 })();
