@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name                Kater Tools (Real Part)
-// @version             0.5.1
+// @version             0.5.2
 // @description         腳本 Kater Tools 實際程式碼
 // @include             https://kater.me/*
 // @exclude             https://kater.me/api/*
@@ -8,9 +8,6 @@
 // @license             MIT
 // ==/UserScript==
 
-// 不要的話就改 false
-// 這只是暫用，晚點會改成常規做法
-let 開啓貼上彩色文字 = true;
 
 (function () {
 	// 更改界面語系 (v0.1)
@@ -294,15 +291,14 @@ let 開啓貼上彩色文字 = true;
 		});
 
 		// v0.5: 解析貼上的彩色文字
-		if (開啓貼上彩色文字) {
-			let id = setInterval(function () {
-				let edit_area = document.querySelectorAll("textarea.FormControl.Composer-flexible");
-				if (edit_area.length > 0) {
-					pasteColorText(edit_area[0]);
-					console.log("v0.5 Add");
-					clearInterval(id);
-				}
-			}, 100)
-		}
+		let id = setInterval(function () {
+			let edit_area = document.querySelectorAll("textarea.FormControl.Composer-flexible");
+			if (edit_area.length > 0) {
+				pasteColorText(edit_area[0]);
+				console.log("v0.5 Add");
+				clearInterval(id);
+			}
+		}, 100)
+
 	})();
 })();
