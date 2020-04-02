@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name                Kater Tools (Real Part)
-// @version             0.5.2
+// @version             0.5.3
 // @description         腳本 Kater Tools 實際程式碼
 // @include             https://kater.me/*
 // @exclude             https://kater.me/api/*
@@ -208,7 +208,7 @@
 			string = replaceAll(string, "&lt;", "<");
 			string = replaceAll(string, "&amp;", "&");
 
-			paste_target.value = string;
+			paste_target.value += string;
 		}
 
 		function replaceAll(str, find, replace) {
@@ -291,14 +291,15 @@
 		});
 
 		// v0.5: 解析貼上的彩色文字
-		let id = setInterval(function () {
-			let edit_area = document.querySelectorAll("textarea.FormControl.Composer-flexible");
-			if (edit_area.length > 0) {
-				pasteColorText(edit_area[0]);
-				console.log("v0.5 Add");
-				clearInterval(id);
-			}
-		}, 100)
-
+		if(false){
+			let id = setInterval(function () {
+				let edit_area = document.querySelectorAll("textarea.FormControl.Composer-flexible");
+				if (edit_area.length > 0) {
+					pasteColorText(edit_area[0]);
+					console.log("v0.5 Add");
+					clearInterval(id);
+				}
+			}, 100)
+		}
 	})();
 })();
