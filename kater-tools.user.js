@@ -397,6 +397,7 @@
       json.data.forEach(function (discussion) {
         let tags = "";
         let follow = "";
+        let recipient = "";
 
         discussion.relationships.tags.data.forEach(function(tag){
           tags += `
@@ -408,6 +409,18 @@
             </span>
           `;
         });
+
+        if(discussion.relationships.recipientUsers.data.length > 0){
+          discussion.relationships.recipientUsers.data.forEach(function(user){
+            recipient += `
+              <span class="RecipientLabel">
+                <span class="RecipientLabel-text">
+                  <span class="username">${json["users"][user.id]["attributes"]["username"]}</span>
+                </span>
+              </span>
+            `;
+          });
+        }
 
         if(discussion.attributes.subscription != undefined && discussion.attributes.subscription == "follow"){
           follow = `          
@@ -452,6 +465,9 @@
                       <span class="TagsLabel">
                         ${tags}
                       </span>
+                    </li>
+                    <li class="item-recipients">
+                      <span class="RecipientsLabel ">${recipient}</span>
                     </li>
                     <li class="item-discussion-votes"><span class="DiscussionListItem-votes" title="點讚"><i
                           class="icon far fa-thumbs-up "></i>${discussion.attributes.votes}</span></li>
