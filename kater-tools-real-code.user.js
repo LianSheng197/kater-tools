@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name                Kater Tools (Real Part)
-// @version             0.5.3
+// @version             0.5.4
 // @description         腳本 Kater Tools 實際程式碼
 // @include             https://kater.me/*
 // @exclude             https://kater.me/api/*
@@ -106,7 +106,254 @@
 		});
 	}
 
-	// 貼上彩色文字 (v0.5)
+	// 個人頁面排序貼文 (v0.5)
+	function postSort(uid, sort, sortField, offset = 0) {
+		let url = `https://kater.me/api/posts?filter[user]=${uid}&filter[type]=comment&page[offset]=${offset}&page[limit]=20&sort=${sort}`;
+		let list = document.querySelector("ul.PostsUserPage-list");
+		
+		fetch(url).then(function (response) {
+			return response.json();
+		}).then(function (json) {
+			// 資料預處理
+			json["users"] = {};
+			json["discussions"] = {};
+			json["groups"] = {};
+			json["posts"] = {};
+
+			json.included.forEach(function (each) {
+				switch (each.type) {
+					case "users":
+						try {
+							json["users"][each.id] = {};
+							json["users"][each.id]["attributes"] = each.attributes;
+						} catch (e) {
+							console.log("[Kater Tools] 資料預處理例外：沒有 users");
+						}
+						break;
+					case "groups":
+						try {
+							json["groups"][each.id] = {};
+							json["groups"][each.id]["attributes"] = each.attributes;
+						} catch (e) {
+							console.log("[Kater Tools] 資料預處理例外：沒有 groups");
+						}
+						break;
+					case "discussions":
+						try {
+							json["discussions"][each.id] = {};
+							json["discussions"][each.id]["attributes"] = each.attributes;
+						} catch (e) {
+							console.log("[Kater Tools] 資料預處理例外：沒有 discussions");
+						}
+						break;
+					case "posts":
+						try {
+							json["post"][each.id] = {};
+							json["post"][each.id]["attributes"] = each.attributes;
+							json["post"][each.id]["relationships"] = each.relationships;
+						} catch (e) {
+							console.log("[Kater Tools] 資料預處理例外：沒有 posts");
+						}
+						break;
+				}
+			});
+
+			// 資料預處理 結束
+
+			if (offset == 0) {
+				list.innerHTML = "";
+			}
+
+			json.data.forEach(function (post) {
+				list.innerHTML += `
+					<li>
+						<div class="PostsUserPage-discussion">於 <a href="/d/${post.relationships.discussion.data.id}/${post.attributes.number}">${json["discussions"][post.relationships.discussion.data.id]["attributes"]["title"]}</a></div>
+						<article class="Post CommentPost">
+							<div>
+								<header class="Post-header">
+									<ul>
+										<li class="item-user">
+											<div class="PostUser History">
+												<h3><a href="/u/${uid}"><img class="Avatar PostUser-avatar"
+															src="${json["users"][post.relationships.user.data.id]["attributes"]["avatarUrl"]}"><span
+															class="UserOnline"><i class="icon fas fa-circle "></i></span><span
+															class="username">${json["users"][post.relationships.user.data.id]["attributes"]["username"]}</span></a><button type="button"
+														class="fas fa-sort-down" id="username-history" data-toggle="dropdown"
+														data-userid="${uid}"></button>
+													<ul id="dropdown-history" class="Dropdown-menu dropdown-menu"></ul>
+												</h3>
+												<!-- 對不起我懶的改這裡QAQ -->
+												<!--<ul class="PostUser-badges badges">
+													<li class="item-group5"><span class="Badge Badge--group--5 " title=""
+															style="background-color: rgb(51, 154, 240);" data-original-title="創始成員"><i
+																class="icon fas fa-crown Badge-icon"></i></span></li>
+												</ul>-->
+											</div>
+										</li>
+										<li class="item-meta">
+											<div class="Dropdown PostMeta"><a class="Dropdown-toggle" data-toggle="dropdown"><time
+														pubdate="true" datetime="${localeTime(post.attributes.createdAt)}" title="${localeTime(post.attributes.createdAt, true)}"
+														data-humantime="true">${timeAgo(post.attributes.createdAt)}</time></a>
+												<div class="Dropdown-menu dropdown-menu"><span class="PostMeta-number">發佈 #${post.attributes.number}</span> <span
+														class="PostMeta-time"><time pubdate="true"
+															datetime="${localeTime(post.attributes.createdAt)}">${localeTime(post.attributes.createdAt, true)}</time></span> <span
+														class="PostMeta-ip"></span><input class="FormControl PostMeta-permalink"></div>
+											</div>
+										</li>
+									</ul>
+								</header>
+								<div class="Post-body">
+									${post.attributes.contentHtml}
+								</div>
+								<aside class="Post-actions PostactionsRestyle">
+									<ul>
+										<li class="item-upvote" title="推"><button class="Post-vote Post-upvote hasIcon" style="color:"
+												type="button"><i class="icon fas fa-thumbs-up Button-icon"></i></button></li>
+										<li class="item-points"><button class=" hasIcon" type="button" title="查看點讚的人"><label
+													class="Post-points">1</label></button></li>
+										<li class="item-downvote" title="踩"><button class="Post-vote Post-downvote hasIcon" style=""
+												type="button"><i class="icon fas fa-thumbs-down Button-icon"></i></button></li>
+										<li class="item-reply"><button class="Button Button--link" type="button" title="回覆"><i
+													class="fas fa-reply"></i><span class="Button-label">回覆</span></button></li>
+										<li>
+											<div class="ButtonGroup Dropdown dropdown Post-controls itemCount4"><button
+													class="Dropdown-toggle Button Button--icon Button--flat" data-toggle="dropdown"><i
+														class="icon fas fa-ellipsis-h Button-icon"></i><span class="Button-label"></span><i
+														class="icon fas fa-caret-down Button-caret"></i></button>
+												<ul class="Dropdown-menu dropdown-menu Dropdown-menu--right">
+													<li class="item-edit"><button class=" hasIcon" type="button" title="編輯"><i
+																class="icon fas fa-pencil-alt Button-icon"></i><span
+																class="Button-label">編輯</span></button></li>
+													<li class="item-hide"><button class=" hasIcon" type="button" title="刪除"><i
+																class="icon far fa-trash-alt Button-icon"></i><span
+																class="Button-label">刪除</span></button></li>
+												</ul>
+											</div>
+										</li>
+									</ul>
+								</aside>
+								<footer class="Post-footer">
+									<ul></ul>
+								</footer>
+							</div>
+						</article>
+						<div class="Post-quoteButtonContainer"></div>
+					</li>
+				`;
+			});
+
+			function localeTime(timeCreatedAt, human = false) {
+				if (human) {
+					return Date.parse(new Date("2020-05-02T10:21:38+00:00")).toString("yyyy-MM-dd HH:mm:ss");
+				} else {
+					return Date.parse(new Date("2020-05-02T10:21:38+00:00")).toString("yyyy-MM-ddTHH:mm:ss+08:00");
+				}
+			}
+
+			function timeAgo(timeCreatedAt) {
+				let now = new Date();
+				let create = new Date(timeCreatedAt);
+				let ms = now - create;
+				let s = parseInt(ms / 1000);
+
+				if (s > 7 * 24 * 60 * 60) {
+					return Date.parse(create).toString("yyyy/MM/dd HH:mm:ss");
+				} else if (s > 24 * 60 * 60) {
+					return `${parseInt((s/24/60/60).toString())} 天前`;
+				} else if (s > 60 * 60) {
+					return `${parseInt((s/60/60).toString())} 小時前`;
+				} else if (s > 60) {
+					return `${parseInt((s/60).toString())} 分前`;
+				} else {
+					return `${s} 秒前`;
+				}
+			}
+		});
+	}
+
+	// 個人頁面排序貼文 - 選項 (v0.5)
+	function insertPostOpt() {
+		let optionTop = `
+			<div id="us_userPageOptionTop" style="margin-bottom: 1rem;">
+				<div class="ButtonGroup Dropdown dropdown itemCount2">
+					<button class="Dropdown-toggle Button" data-toggle="dropdown" aria-expanded="false">
+						<span class="Button-label">最新</span>
+						<i class="icon fas fa-caret-down Button-caret"></i>
+					</button>
+					<ul class="Dropdown-menu dropdown-menu">
+						<li class="">
+							<button active="true" class="hasIcon" type="button" data-sort="latest">
+								<i class="icon fas fa-check Button-icon"></i>
+								<span class="Button-label">最新</span>
+							</button>
+							<button class="hasIcon" type="button" data-sort="oldest">
+								<span class="Button-label">最舊</span>
+							</button>
+						</li>
+					</ul>
+				</div>
+			</div>
+		`;
+		let optionBottom = `
+			<div id="us_userPageOptionBottom" style="text-align: center;">
+				<button class="Button" type="button">
+					<span class="Button-label">載入更多</span>
+				</button>
+			</div>
+		`;
+
+		addHTML(optionTop, "div.sideNavContainer div.PostsUserPage", "afterbegin");
+		addHTML(optionBottom, "div.sideNavContainer div.PostsUserPage", "beforeend");
+
+		// 隱藏原生按鈕（載入更多）
+		try {
+			document.querySelector("div.PostsUserPage-loadMore").style.display = "none";
+		} catch (e) {}
+
+		// 上選單點擊事件
+		let sortField = {
+			latest: {
+				link: "-createdAt",
+				name: "最新"
+			},
+			oldest: {
+				link: "createdAt",
+				name: "最舊"
+			}
+		};
+		let uid = app.current.user.data.id;
+		let sortList = document.querySelectorAll("div#us_userPageOptionTop ul button");
+		let selected = document.querySelector("div#us_userPageOptionTop button.Dropdown-toggle > span");
+		sortList.forEach(function (each) {
+			each.addEventListener("click", function (e) {
+				let sort = each.getAttribute("data-sort");
+				let originActive = document.querySelector("div#us_userPageOptionTop ul button[active=true]");
+				originActive.removeAttribute("active");
+				originActive.querySelector("i").remove();
+				each.setAttribute("active", "true");
+				each.insertAdjacentHTML("afterbegin", `<i class="icon fas fa-check Button-icon"></i>`);
+				selected.innerText = sortField[sort]["name"];
+
+				postSort(uid, sortField[sort]["link"], sortField);
+			})
+		});
+		// 上選單點擊事件 結束
+
+		// 載入更多按鈕點擊事件
+		let moreButton = document.querySelector("div#us_userPageOptionBottom button");
+		let list = document.querySelector("ul.PostsUserPage-list");
+		list.setAttribute("data-offset", "0");		
+		moreButton.addEventListener("click", function (e){
+			let sort = document.querySelector("div#us_userPageOptionTop ul button[active=true]").getAttribute("data-sort");
+			let offset = list.getAttribute("data-offset") + 20;
+			list.setAttribute("data-offset", offset);
+
+			postSort(uid, sortField[sort]["link"], sortField, offset);
+		});
+
+	}
+
+	// 貼上彩色文字 (v0.?)
 	// （暫時只支援單行，多行的話需自行分行...）
 	function pasteColorText(paste_target) {
 		paste_target.addEventListener('paste', handlepaste);
@@ -201,6 +448,8 @@
 
 			// 避免重音符 (backtick) 被解析成程式碼區塊
 			string = replaceAll(string, "`", "\\`");
+
+			// 避免無論打多少空格都會只剩下一個空格
 			string = replaceAll(string, " ", " ");
 
 			// 替換殘留 HTML Entity （不知道爲什麼 unescape 沒有全部替換）
@@ -290,8 +539,17 @@
 			}, 200);
 		});
 
-		// v0.5: 解析貼上的彩色文字
-		if(false){
+		// v0.5: 個人頁面排序
+		setInterval(function () {
+			if (document.querySelectorAll("div.sideNavContainer div.PostsUserPage").length != 0 &&
+				document.querySelectorAll("div#us_userPageOptionTop").length == 0) {
+				insertPostOpt();
+			}
+		}, 100);
+
+
+		// v0.?: 解析貼上的彩色文字
+		if (false) {
 			let id = setInterval(function () {
 				let edit_area = document.querySelectorAll("textarea.FormControl.Composer-flexible");
 				if (edit_area.length > 0) {
