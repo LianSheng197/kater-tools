@@ -345,7 +345,7 @@
 		list.setAttribute("data-offset", "0");		
 		moreButton.addEventListener("click", function (e){
 			let sort = document.querySelector("div#us_userPageOptionTop ul button[active=true]").getAttribute("data-sort");
-			let offset = list.getAttribute("data-offset") + 20;
+			let offset = parseInt(list.getAttribute("data-offset")) + 20;
 			list.setAttribute("data-offset", offset);
 
 			postSort(uid, sortField[sort]["link"], sortField, offset);

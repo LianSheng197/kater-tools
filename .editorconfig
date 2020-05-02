@@ -1,0 +1,8 @@
+; 專案最上層的設定檔
+root = true
+
+[*]
+; 縮排類型
+indent_style = space
+; 縮排長度
+indent_size = 2
