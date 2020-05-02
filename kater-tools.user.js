@@ -267,7 +267,7 @@
   function insertPostOpt() {
     let optionTop = `
       <div id="us_userPageOptionTop" style="margin-bottom: 1rem;">
-        <div class="ButtonGroup Dropdown dropdown itemCount2">
+        <div class="ButtonGroup Dropdown dropdown itemCount6">
           <button class="Dropdown-toggle Button" data-toggle="dropdown" aria-expanded="false">
             <span class="Button-label">最新</span>
             <i class="icon fas fa-caret-down Button-caret"></i>
@@ -346,7 +346,7 @@
   }
 
   // 個人頁面排序討論 (v0.5.6)
-  function discussionSort(uid, name, sort, sortField, search="", offset = 0) {
+  function discussionSort(uid, name, sort, sortField, search = "", offset = 0) {
     let url = `https://kater.me/api/discussions?filter[user]=${uid}&filter[q]=${search}%20author:${name}&sort=${sort}&page[offset]=${offset}`;
     let list = document.querySelector("ul.DiscussionList-discussions");
 
@@ -399,7 +399,7 @@
         let follow = "";
         let recipient = "";
 
-        discussion.relationships.tags.data.forEach(function(tag){
+        discussion.relationships.tags.data.forEach(function (tag) {
           tags += `
             <span class="TagLabel colored" style="color: ${json["tags"][tag.id]["attributes"]["color"]}; background-color: ${json["tags"][tag.id]["attributes"]["color"]};">
               <span class="TagLabel-text">
@@ -410,8 +410,8 @@
           `;
         });
 
-        if(discussion.relationships.recipientUsers.data.length > 0){
-          discussion.relationships.recipientUsers.data.forEach(function(user){
+        if (discussion.relationships.recipientUsers.data.length > 0) {
+          discussion.relationships.recipientUsers.data.forEach(function (user) {
             recipient += `
               <span class="RecipientLabel">
                 <span class="RecipientLabel-text">
@@ -422,7 +422,7 @@
           });
         }
 
-        if(discussion.attributes.subscription != undefined && discussion.attributes.subscription == "follow"){
+        if (discussion.attributes.subscription != undefined && discussion.attributes.subscription == "follow") {
           follow = `          
             <ul class="DiscussionListItem-badges badges">
             <li class="item-subscription"><span class="Badge Badge--following " title="" data-original-title="關注"><i
@@ -473,7 +473,7 @@
                           class="icon far fa-thumbs-up "></i>${discussion.attributes.votes}</span></li>
                     <li class="item-discussion-views">${discussion.attributes.views}</li>
                   </ul>
-                </a><span class="DiscussionListItem-count" title="">${discussion.attributes.commentCount - 1}</span>
+                </a><span class="DiscussionListItem-count" title="">${discussion.attributes.commentCount}</span>
               </div>
             </div>
           </li>
@@ -488,17 +488,29 @@
       <div id="us_userPageOptionTop" style="margin-bottom: 1rem;">
         <div class="ButtonGroup Dropdown dropdown itemCount2" style="vertical-align: initial;">
           <button class="Dropdown-toggle Button" data-toggle="dropdown" aria-expanded="false">
-            <span class="Button-label">最新</span>
+            <span class="Button-label">最新討論</span>
             <i class="icon fas fa-caret-down Button-caret"></i>
           </button>
           <ul class="Dropdown-menu dropdown-menu">
             <li class="">
               <button active="true" class="hasIcon" type="button" data-sort="latest">
                 <i class="icon fas fa-check Button-icon"></i>
-                <span class="Button-label">最新</span>
+                <span class="Button-label">最新討論</span>
               </button>
               <button class="hasIcon" type="button" data-sort="oldest">
-                <span class="Button-label">最舊</span>
+                <span class="Button-label">最舊討論</span>
+              </button>
+              <button class="hasIcon" type="button" data-sort="latestPost">
+                <span class="Button-label">近期回覆</span>
+              </button>
+              <button class="hasIcon" type="button" data-sort="oldestPost">
+                <span class="Button-label">考古專用</span>
+              </button>
+              <button class="hasIcon" type="button" data-sort="maxCount">
+                <span class="Button-label">最多回覆</span>
+              </button>
+              <button class="hasIcon" type="button" data-sort="minCount">
+                <span class="Button-label">乏人問津</span>
               </button>
             </li>
           </ul>
@@ -530,11 +542,27 @@
     let sortField = {
       latest: {
         link: "-createdAt",
-        name: "最新"
+        name: "最新討論"
       },
       oldest: {
         link: "createdAt",
-        name: "最舊"
+        name: "最舊討論"
+      },
+      latestPost: {
+        link: "-lastPostedAt",
+        name: "近期回覆"
+      },
+      oldestPost: {
+        link: "lastPostedAt",
+        name: "考古專用"
+      },
+      maxCount: {
+        link: "-commentCount",
+        name: "最多回覆"
+      },
+      minCount: {
+        link: "commentCount",
+        name: "乏人問津"
       }
     };
 
@@ -561,11 +589,11 @@
     // 搜尋框事件 
     let searchInput = document.querySelector("div#us_userPageOptionTop input[type=search]");
     let list = document.querySelector("ul.DiscussionList-discussions");
-    searchInput.addEventListener("keyup", function(e){
+    searchInput.addEventListener("keyup", function (e) {
       searchInput.value = searchInput.value.replace(/[a-zA-Z0-9:]/g, "");
 
       // Enter
-      if(e.keyCode === 13){
+      if (e.keyCode === 13) {
         let search = searchInput.value;
         let sort = document.querySelector("div#us_userPageOptionTop ul button[active=true]").getAttribute("data-sort");
         list.setAttribute("data-search", search);
