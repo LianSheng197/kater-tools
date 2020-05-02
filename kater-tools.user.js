@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.5
-// @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序
+// @version      0.5.6
+// @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
 // @include      https://kater.me/*
@@ -17,7 +17,7 @@
 // @require      https://greasyfork.org/scripts/402133-toolbox/code/Toolbox.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js
 
-// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.5 可正常使用 （這裡的版本爲作者測試過的最後版本）
+// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.6 可正常使用 （這裡的版本爲作者測試過的最後版本）
 // @compatible   firefox Firefox 70 + Tampermonkey + v0.4.1 可正常使用 （這裡的版本爲作者測試過的最後版本）
 
 // @license      MIT
