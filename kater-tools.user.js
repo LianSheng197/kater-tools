@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.8
+// @version      0.5.9
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -16,6 +16,7 @@
 
 // @require      https://greasyfork.org/scripts/402133-toolbox/code/Toolbox.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js
+// @require      https://cdn.jsdelivr.net/npm/pikaday/pikaday.js
 
 // @compatible   chrome Chrome 71 + Tampermonkey + v0.5.6 可正常使用 （這裡的版本爲作者測試過的最後版本）
 // @compatible   firefox Firefox 70 + Tampermonkey + v0.4.1 可正常使用 （這裡的版本爲作者測試過的最後版本）
@@ -145,34 +146,26 @@
             try {
               json["users"][each.id] = {};
               json["users"][each.id]["attributes"] = each.attributes;
-            } catch (e) {
-              console.log("[Kater Tools] 資料預處理例外：沒有 users");
-            }
+            } catch (e) {}
             break;
           case "groups":
             try {
               json["groups"][each.id] = {};
               json["groups"][each.id]["attributes"] = each.attributes;
-            } catch (e) {
-              console.log("[Kater Tools] 資料預處理例外：沒有 groups");
-            }
+            } catch (e) {}
             break;
           case "discussions":
             try {
               json["discussions"][each.id] = {};
               json["discussions"][each.id]["attributes"] = each.attributes;
-            } catch (e) {
-              console.log("[Kater Tools] 資料預處理例外：沒有 discussions");
-            }
+            } catch (e) {}
             break;
           case "posts":
             try {
               json["post"][each.id] = {};
               json["post"][each.id]["attributes"] = each.attributes;
               json["post"][each.id]["relationships"] = each.relationships;
-            } catch (e) {
-              console.log("[Kater Tools] 資料預處理例外：沒有 posts");
-            }
+            } catch (e) {}
             break;
         }
       });
@@ -358,32 +351,32 @@
       json["tags"] = {};
       json["posts"] = {};
 
+      // 當返回資料爲空時
+      if (json.included === undefined) {
+        console.log("[Kater Tools] 請求已完成，沒有符合資料");
+        return;
+      }
+
       json.included.forEach(function (each) {
         switch (each.type) {
           case "users":
             try {
               json["users"][each.id] = {};
               json["users"][each.id]["attributes"] = each.attributes;
-            } catch (e) {
-              console.log("[Kater Tools] 資料預處理例外：沒有 users");
-            }
+            } catch (e) {}
             break;
           case "tags":
             try {
               json["tags"][each.id] = {};
               json["tags"][each.id]["attributes"] = each.attributes;
-            } catch (e) {
-              console.log("[Kater Tools] 資料預處理例外：沒有 tags");
-            }
+            } catch (e) {}
             break;
           case "posts":
             try {
               json["post"][each.id] = {};
               json["post"][each.id]["attributes"] = each.attributes;
               json["post"][each.id]["relationships"] = each.relationships;
-            } catch (e) {
-              console.log("[Kater Tools] 資料預處理例外：沒有 posts");
-            }
+            } catch (e) {}
             break;
         }
       });
@@ -517,7 +510,17 @@
         </div>
         <div class="Search" style="display: inline-block; padding-left: 1rem;">
           <div class="Search-input">
-            <input class="FormControl" type="search" placeholder="禁止輸入英文數字及冒號">
+            <input class="FormControl" type="search" placeholder="搜尋" title="不能搜尋英文數字跟冒號，避免觸發系統搜尋問題" style="width: 8rem;">
+          </div>
+        </div>
+        <div class="Search" style="display: inline-block; padding-left: 1rem;">
+          <div id="us_dateStart" class="Search-input">
+            <input class="FormControl" placeholder="起始日期" style="width: 9rem;">  
+          </div>
+        </div>
+        <div class="Search" style="display: inline-block; padding-left: 1rem;">
+          <div id="us_dateEnd" class="Search-input">
+            <input class="FormControl" placeholder="結束日期" style="width: 9rem;">
           </div>
         </div>
       </div>
@@ -532,6 +535,56 @@
 
     addHTML(optionTop, "div.sideNavContainer div.DiscussionsUserPage", "afterbegin");
     addHTML(optionBottom, "div.sideNavContainer div.DiscussionsUserPage", "beforeend");
+
+    // Pikaday 日期選擇器
+    // 我不太會用 Pikaday 的初始化選項，某些目的只好硬幹
+    let dateStart = document.querySelector("div#us_dateStart > input");
+    let dateEnd = document.querySelector("div#us_dateEnd > input");
+
+    new Pikaday({
+      field: dateStart,
+      format: 'YYYY-MM-DD',
+      setDefaultDate: true,
+      defaultDate: new Date("2019-10-17"),
+      minDate: new Date("2019-10-17"),
+      maxDate: new Date(),
+      i18n: {
+        previousMonth: '上月',
+        nextMonth: '下月',
+        months: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+        weekdays: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
+        weekdaysShort: ['日', '一', '二', '三', '四', '五', '六']
+      },
+      onSelect: function () {
+        let date = Date.parse(this._d).toString("yyyy-MM-dd");
+        dateStart.value = date;
+      }
+    });
+
+    new Pikaday({
+      field: dateEnd,
+      format: 'YYYY-MM-DD',
+      setDefaultDate: true,
+      defaultDate: new Date(),
+      minDate: new Date("2019-10-17"),
+      maxDate: new Date(),
+      i18n: {
+        previousMonth: '上月',
+        nextMonth: '下月',
+        months: ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'],
+        weekdays: ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'],
+        weekdaysShort: ['日', '一', '二', '三', '四', '五', '六']
+      },
+      onSelect: function () {
+        let date = Date.parse(this._d).toString("yyyy-MM-dd");
+        dateEnd.value = date;
+      }
+    });
+
+    // Pikaday 日期選擇器 結束
+
+    dateStart.value = "";
+    dateEnd.value = "";
 
     // 隱藏原生按鈕（載入更多）
     try {
@@ -832,6 +885,12 @@
 
     // v0.5: 個人頁面排序
     setInterval(function () {
+      // 添加討論日期選取器的 css 於 head
+      if (document.querySelectorAll("link#us_pikaday").length == 0) {
+        console.log("[Kater Tools] Add Pikaday");
+        addStyleLink("https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css", "us_pikaday");
+      }
+
       // 貼文
       if (document.querySelectorAll("div.sideNavContainer div.PostsUserPage").length != 0 &&
         document.querySelectorAll("div.PostsUserPage div#us_userPageOptionTop").length == 0) {
