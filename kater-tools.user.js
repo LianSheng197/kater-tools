@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.9
+// @version      0.5.10
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -339,9 +339,46 @@
   }
 
   // 個人頁面排序討論 (v0.5.6)
-  function discussionSort(uid, name, sort, sortField, search = "", offset = 0) {
-    let url = `https://kater.me/api/discussions?filter[user]=${uid}&filter[q]=${search}%20author:${name}&sort=${sort}&page[offset]=${offset}`;
+  let sortField = {
+    latest: {
+      link: "-createdAt",
+      name: "最新討論"
+    },
+    oldest: {
+      link: "createdAt",
+      name: "最舊討論"
+    },
+    latestPost: {
+      link: "-lastPostedAt",
+      name: "近期回覆"
+    },
+    oldestPost: {
+      link: "lastPostedAt",
+      name: "考古專用"
+    },
+    maxCount: {
+      link: "-commentCount",
+      name: "最多回覆"
+    },
+    minCount: {
+      link: "commentCount",
+      name: "乏人問津"
+    }
+  };
+  function discussionSort(offset = 0) {
+    let dateStart = document.querySelector("div#us_dateStart > input").getAttribute("data-date");
+    let dateEnd = document.querySelector("div#us_dateEnd > input").getAttribute("data-date");
+    let search = document.querySelector("div#us_userPageOptionTop input[type=search]").value;
+    let sortName = document.querySelector("div#us_userPageOptionTop ul button[active=true]").getAttribute("data-sort");
+    let sort = sortField[sortName]["link"];
+    let uid = app.current.user.data.id;
+    let name = app.current.user.data.attributes.username;
+
+    let url = `https://kater.me/api/discussions?filter[user]=${uid}&filter[q]=${search} author:${name} created:${dateStart}..${dateEnd}&sort=${sort}&page[offset]=${offset}`;
+
     let list = document.querySelector("ul.DiscussionList-discussions");
+    list.setAttribute("data-offset", offset);
+    list.setAttribute("data-search", search);
 
     fetch(url).then(function (response) {
       return response.json();
@@ -558,6 +595,8 @@
       onSelect: function () {
         let date = Date.parse(this._d).toString("yyyy-MM-dd");
         dateStart.value = date;
+        dateStart.setAttribute("data-date", date);
+        discussionSort();
       }
     });
 
@@ -578,13 +617,18 @@
       onSelect: function () {
         let date = Date.parse(this._d).toString("yyyy-MM-dd");
         dateEnd.value = date;
+        dateEnd.setAttribute("data-date", date);
+        discussionSort();
       }
     });
 
-    // Pikaday 日期選擇器 結束
-
     dateStart.value = "";
     dateEnd.value = "";
+    dateStart.setAttribute("data-date", Date.parse(new Date("2019-10-17")).toString("yyyy-MM-dd"));
+    dateEnd.setAttribute("data-date", Date.parse(new Date()).toString("yyyy-MM-dd"));
+
+    // Pikaday 日期選擇器 結束
+
 
     // 隱藏原生按鈕（載入更多）
     try {
@@ -592,35 +636,9 @@
     } catch (e) {}
 
     // 上選單點擊事件
-    let sortField = {
-      latest: {
-        link: "-createdAt",
-        name: "最新討論"
-      },
-      oldest: {
-        link: "createdAt",
-        name: "最舊討論"
-      },
-      latestPost: {
-        link: "-lastPostedAt",
-        name: "近期回覆"
-      },
-      oldestPost: {
-        link: "lastPostedAt",
-        name: "考古專用"
-      },
-      maxCount: {
-        link: "-commentCount",
-        name: "最多回覆"
-      },
-      minCount: {
-        link: "commentCount",
-        name: "乏人問津"
-      }
-    };
+    
 
-    let uid = app.current.user.data.id;
-    let name = app.current.user.data.attributes.username;
+    
     let sortList = document.querySelectorAll("div#us_userPageOptionTop ul button");
     let selected = document.querySelector("div#us_userPageOptionTop button.Dropdown-toggle > span");
 
@@ -634,7 +652,7 @@
         each.insertAdjacentHTML("afterbegin", `<i class="icon fas fa-check Button-icon"></i>`);
         selected.innerText = sortField[sort]["name"];
 
-        discussionSort(uid, name, sortField[sort]["link"], sortField);
+        discussionSort();
       })
     });
     // 上選單點擊事件 結束
@@ -647,10 +665,7 @@
 
       // Enter
       if (e.keyCode === 13) {
-        let search = searchInput.value;
-        let sort = document.querySelector("div#us_userPageOptionTop ul button[active=true]").getAttribute("data-sort");
-        list.setAttribute("data-search", search);
-        discussionSort(uid, name, sortField[sort]["link"], sortField, search);
+        discussionSort();
       }
     });
 
@@ -659,13 +674,8 @@
     let moreButton = document.querySelector("div#us_userPageOptionBottom button");
     list.setAttribute("data-offset", "0");
     moreButton.addEventListener("click", function (e) {
-      let sort = document.querySelector("div#us_userPageOptionTop ul button[active=true]").getAttribute("data-sort");
-      let search = searchInput.value;
       let offset = parseInt(list.getAttribute("data-offset")) + 20;
-      list.setAttribute("data-offset", offset);
-      list.setAttribute("data-search", search);
-
-      discussionSort(uid, name, sortField[sort]["link"], sortField, search, offset);
+      discussionSort(offset);
     });
   }
 
