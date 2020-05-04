@@ -366,7 +366,10 @@
       name: "乏人問津"
     }
   };
+
   function discussionSort(offset = 0) {
+    message("正在處理請求...", 1);
+
     let dateStart = document.querySelector("div#us_dateStart > input").getAttribute("data-date");
     let dateEnd = document.querySelector("div#us_dateEnd > input").getAttribute("data-date");
     let search = document.querySelector("div#us_userPageOptionTop input[type=search]").value;
@@ -392,6 +395,7 @@
       // 當返回資料爲空時
       if (json.included === undefined) {
         console.log("[Kater Tools] 請求已完成，沒有符合資料");
+        message("請求已完成，沒有符合資料", 0);
         return;
       }
 
@@ -510,6 +514,10 @@
           </li>
         `;
       });
+
+      message("請求已完成", 0);
+    }).catch(function (e) {
+      message("取得資料時遇到錯誤！", 2);
     });
   }
 
@@ -637,9 +645,6 @@
     } catch (e) {}
 
     // 上選單點擊事件
-    
-
-    
     let sortList = document.querySelectorAll("div#us_userPageOptionTop ul button");
     let selected = document.querySelector("div#us_userPageOptionTop button.Dropdown-toggle > span");
 
@@ -705,6 +710,32 @@
     } else {
       return `${s} 秒前`;
     }
+  }
+
+  // 訊息框，採用原生樣式 (Alert)，只是放到右上角
+  // 0 綠色、1 黃色、2 紅色
+  let expireMsg = {};
+
+  function message(msg, type = 0) {
+    let typeField = ["success", "warning", "error"];
+    let randomID = Math.random().toString(36).substr(2, 6);
+
+    let block = `
+      <div id="us_messageBlock" data-id="${randomID}" class="AlertManager">
+        <div class="AlertManager-alert">
+          <div class="Alert Alert--${typeField[type]}" style="position: fixed; top: 2rem; right: 2rem; width: 10rem;">
+            <span class="Alert-body">${msg}</span>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.querySelector("div#us_messageArea").innerHTML += block;
+
+    // 不能使用 setTimeout 或 setInterval （會卡死其他部件）
+    // 而此類腳本也不便於利用 worker
+    // 只好在下方 main function 輪詢物件 expireMsg
+    expireMsg[randomID] = Date.now() + 2000;
   }
 
 
@@ -912,6 +943,20 @@
       if (document.querySelectorAll("div.sideNavContainer div.DiscussionsUserPage").length != 0 &&
         document.querySelectorAll("div.DiscussionsUserPage div#us_userPageOptionTop").length == 0) {
         insertDiscussionOpt();
+      }
+
+      if(document.querySelectorAll("div#us_messageArea").length == 0){
+        document.querySelector("div#app").innerHTML += `<div id="us_messageArea"></div>`
+      }
+
+      // 訊息框自動刪除（詳見 message()）
+      for (let [key, value] of Object.entries(expireMsg)) {
+        if (Date.now() > value) {
+          document.querySelector(`div#us_messageBlock[data-id="${key}"]`).remove();
+          delete expireMsg[key];
+        }
+
+        console.log(expireMsg);
       }
     }, 100);
 
