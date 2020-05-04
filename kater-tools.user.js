@@ -955,8 +955,6 @@
           document.querySelector(`div#us_messageBlock[data-id="${key}"]`).remove();
           delete expireMsg[key];
         }
-
-        console.log(expireMsg);
       }
     }, 100);
 
