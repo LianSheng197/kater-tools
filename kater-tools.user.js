@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.14
+// @version      0.5.15
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -131,133 +131,21 @@
     });
   }
 
-  // 個人頁面排序貼文 (v0.5.5)
+  // 個人頁面排序貼文 (v0.5.5) (以原生方式改寫於 v0.5.15，感謝大杯鮮奶茶)
   function postSort(uid, sort, sortField, offset = 0) {
-    let url = `https://kater.me/api/posts?filter[user]=${uid}&filter[type]=comment&page[offset]=${offset}&page[limit]=20&sort=${sort}`;
-    let list = document.querySelector("ul.PostsUserPage-list");
-
-    fetch(url).then(function (response) {
-      return response.json();
-    }).then(function (json) {
-      // 資料預處理
-      json["users"] = {};
-      json["discussions"] = {};
-      json["groups"] = {};
-      json["posts"] = {};
-
-      json.included.forEach(function (each) {
-        switch (each.type) {
-          case "users":
-            try {
-              json["users"][each.id] = {};
-              json["users"][each.id]["attributes"] = each.attributes;
-            } catch (e) {}
-            break;
-          case "groups":
-            try {
-              json["groups"][each.id] = {};
-              json["groups"][each.id]["attributes"] = each.attributes;
-            } catch (e) {}
-            break;
-          case "discussions":
-            try {
-              json["discussions"][each.id] = {};
-              json["discussions"][each.id]["attributes"] = each.attributes;
-            } catch (e) {}
-            break;
-          case "posts":
-            try {
-              json["post"][each.id] = {};
-              json["post"][each.id]["attributes"] = each.attributes;
-              json["post"][each.id]["relationships"] = each.relationships;
-            } catch (e) {}
-            break;
-        }
-      });
-
-      // 資料預處理 結束
-
-      if (offset == 0) {
-        list.innerHTML = "";
-      }
-
-      json.data.forEach(function (post) {
-        list.innerHTML += `
-          <li>
-            <div class="PostsUserPage-discussion">於 <a href="/d/${post.relationships.discussion.data.id}/${post.attributes.number}">${json["discussions"][post.relationships.discussion.data.id]["attributes"]["title"]}</a></div>
-            <article class="Post CommentPost">
-              <div>
-                <header class="Post-header">
-                  <ul>
-                    <li class="item-user">
-                      <div class="PostUser History">
-                        <h3><a href="/u/${uid}"><img class="Avatar PostUser-avatar"
-                              src="${json["users"][post.relationships.user.data.id]["attributes"]["avatarUrl"]}"><span
-                              class="UserOnline"><i class="icon fas fa-circle "></i></span><span
-                              class="username">${json["users"][post.relationships.user.data.id]["attributes"]["username"]}</span></a><button type="button"
-                            class="fas fa-sort-down" id="username-history" data-toggle="dropdown"
-                            data-userid="${uid}"></button>
-                          <ul id="dropdown-history" class="Dropdown-menu dropdown-menu"></ul>
-                        </h3>
-                        <!-- 對不起我懶的改這裡QAQ -->
-                        <!--<ul class="PostUser-badges badges">
-                          <li class="item-group5"><span class="Badge Badge--group--5 " title=""
-                              style="background-color: rgb(51, 154, 240);" data-original-title="創始成員"><i
-                                class="icon fas fa-crown Badge-icon"></i></span></li>
-                        </ul>-->
-                      </div>
-                    </li>
-                    <li class="item-meta">
-                      <div class="Dropdown PostMeta"><a class="Dropdown-toggle" data-toggle="dropdown"><time
-                            pubdate="true" datetime="${localeTime(post.attributes.createdAt)}" title="${localeTime(post.attributes.createdAt, true)}"
-                            data-humantime="true">${timeAgo(post.attributes.createdAt)}</time></a>
-                        <div class="Dropdown-menu dropdown-menu"><span class="PostMeta-number">發佈 #${post.attributes.number}</span> <span
-                            class="PostMeta-time"><time pubdate="true"
-                              datetime="${localeTime(post.attributes.createdAt)}">${localeTime(post.attributes.createdAt, true)}</time></span> <span
-                            class="PostMeta-ip"></span><input class="FormControl PostMeta-permalink"></div>
-                      </div>
-                    </li>
-                  </ul>
-                </header>
-                <div class="Post-body">
-                  ${post.attributes.contentHtml}
-                </div>
-                <aside class="Post-actions PostactionsRestyle">
-                  <ul>
-                    <li class="item-upvote" title="推"><button class="Post-vote Post-upvote hasIcon" style="color:"
-                        type="button"><i class="icon fas fa-thumbs-up Button-icon"></i></button></li>
-                    <li class="item-points"><button class=" hasIcon" type="button" title="查看點讚的人"><label
-                          class="Post-points">1</label></button></li>
-                    <li class="item-downvote" title="踩"><button class="Post-vote Post-downvote hasIcon" style=""
-                        type="button"><i class="icon fas fa-thumbs-down Button-icon"></i></button></li>
-                    <li class="item-reply"><button class="Button Button--link" type="button" title="回覆"><i
-                          class="fas fa-reply"></i><span class="Button-label">回覆</span></button></li>
-                    <li>
-                      <div class="ButtonGroup Dropdown dropdown Post-controls itemCount4"><button
-                          class="Dropdown-toggle Button Button--icon Button--flat" data-toggle="dropdown"><i
-                            class="icon fas fa-ellipsis-h Button-icon"></i><span class="Button-label"></span><i
-                            class="icon fas fa-caret-down Button-caret"></i></button>
-                        <ul class="Dropdown-menu dropdown-menu Dropdown-menu--right">
-                          <li class="item-edit"><button class=" hasIcon" type="button" title="編輯"><i
-                                class="icon fas fa-pencil-alt Button-icon"></i><span
-                                class="Button-label">編輯</span></button></li>
-                          <li class="item-hide"><button class=" hasIcon" type="button" title="刪除"><i
-                                class="icon far fa-trash-alt Button-icon"></i><span
-                                class="Button-label">刪除</span></button></li>
-                        </ul>
-                      </div>
-                    </li>
-                  </ul>
-                </aside>
-                <footer class="Post-footer">
-                  <ul></ul>
-                </footer>
-              </div>
-            </article>
-            <div class="Post-quoteButtonContainer"></div>
-          </li>
-        `;
-      });
+    app.store.find("posts", {
+      filter: {
+        user: uid,
+        type: "comment"
+      },
+      page: {
+        offset: offset,
+        limit: 20
+      },
+      sort: sort
+    }).then(function (x) {
+      [].push.apply(app.current.posts, x);
+      m.redraw(); //剛沒注意到lazyRedraw()會造成畫面卡住...
     });
   }
 
@@ -314,19 +202,21 @@
     let uid = app.current.user.data.id;
     let sortList = document.querySelectorAll("div#us_userPageOptionTop ul button");
     let selected = document.querySelector("div#us_userPageOptionTop button.Dropdown-toggle > span");
+
     sortList.forEach(function (each) {
       each.addEventListener("click", function (e) {
-        let sort = each.getAttribute("data-sort");
-        let originActive = document.querySelector("div#us_userPageOptionTop ul button[active=true]");
-        originActive.removeAttribute("active");
-        originActive.querySelector("i").remove();
-        each.setAttribute("active", "true");
-        each.insertAdjacentHTML("afterbegin", `<i class="icon fas fa-check Button-icon"></i>`);
-        selected.innerText = sortField[sort]["name"];
+          let sort = each.getAttribute("data-sort");
+          let originActive = document.querySelector("div#us_userPageOptionTop ul button[active=true]");
+          originActive.removeAttribute("active");
+          originActive.querySelector("i").remove();
+          each.setAttribute("active", "true");
+          each.insertAdjacentHTML("afterbegin", `<i class="icon fas fa-check Button-icon"></i>`);
+          selected.innerText = sortField[sort]["name"];
 
-        postSort(uid, sortField[sort]["link"], sortField);
+          app.current.posts = []; //加上這個在切換排序方式時清空原本儲存的陣列，不然會出現新的貼文接著舊的貼文...
+          postSort(uid, sortField[sort]["link"], sortField);
       })
-    });
+  });
     // 上選單點擊事件 結束
 
     // 載入更多按鈕點擊事件
