@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.13
+// @version      0.5.14
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -70,17 +70,21 @@
     });
   }
 
-  // 覆寫提及使用者連結 (v0.2)
+  // 覆寫提及使用者連結 (v0.2) (改寫於 v0.5.14，感謝大杯鮮奶茶)
+  // Ref: https://api.flarum.dev/js/v0.1.0-beta.8/class/src/common/Store.js~Store.html#instance-method-find
   function overwriteUserMention(node) {
-    let re = /kater.me\/u\/(.+)$/;
-    let name = node.href.match(re)[1];
-    node.classList.add("overwrited");
-
-    fetch(`https://kater.me/api/users?filter%5Bq%5D=${name}&page%5Blimit%5D=1`).then(function (response) {
-      return response.json();
-    }).then(function (json) {
-      node.href = `https://kater.me/u/${json.data[0].id}`;
+    let name = decodeURI(node.href).replace("https://kater.me/u/", "");
+    app.store.find("users", {
+      filter: {
+        q: name
+      },
+      page: {
+        limit: 1
+      }
+    }).then(function (x) {
+      node.href = `https://kater.me/u/${x[0].data.id}`
     });
+    node.classList.add("overwrited");
   }
 
   // 用 UID 提及使用者 (v0.3)
@@ -828,7 +832,7 @@
         insertDiscussionOpt();
       }
 
-      if(document.querySelectorAll("div#us_messageArea").length == 0){
+      if (document.querySelectorAll("div#us_messageArea").length == 0) {
         document.querySelector("div#app").innerHTML += `<div id="us_messageArea"></div>`
       }
 
