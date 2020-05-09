@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.15
+// @version      0.5.16
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -205,18 +205,18 @@
 
     sortList.forEach(function (each) {
       each.addEventListener("click", function (e) {
-          let sort = each.getAttribute("data-sort");
-          let originActive = document.querySelector("div#us_userPageOptionTop ul button[active=true]");
-          originActive.removeAttribute("active");
-          originActive.querySelector("i").remove();
-          each.setAttribute("active", "true");
-          each.insertAdjacentHTML("afterbegin", `<i class="icon fas fa-check Button-icon"></i>`);
-          selected.innerText = sortField[sort]["name"];
+        let sort = each.getAttribute("data-sort");
+        let originActive = document.querySelector("div#us_userPageOptionTop ul button[active=true]");
+        originActive.removeAttribute("active");
+        originActive.querySelector("i").remove();
+        each.setAttribute("active", "true");
+        each.insertAdjacentHTML("afterbegin", `<i class="icon fas fa-check Button-icon"></i>`);
+        selected.innerText = sortField[sort]["name"];
 
-          app.current.posts = []; //加上這個在切換排序方式時清空原本儲存的陣列，不然會出現新的貼文接著舊的貼文...
-          postSort(uid, sortField[sort]["link"], sortField);
+        app.current.posts = []; //加上這個在切換排序方式時清空原本儲存的陣列，不然會出現新的貼文接著舊的貼文...
+        postSort(uid, sortField[sort]["link"], sortField);
       })
-  });
+    });
     // 上選單點擊事件 結束
 
     // 載入更多按鈕點擊事件
@@ -264,6 +264,12 @@
   function discussionSort(offset = 0) {
     message("正在處理請求...", 1);
 
+    let tags = JSON.parse(document.querySelector("button#us_tagFilter").getAttribute("data-tags"));
+    let tagString = "";
+    tags.forEach(function(tag){
+      tagString += `tag:${app["store"]["data"]["tags"][tag]["data"]["attributes"]["slug"]} `;
+    });
+
     let dateStart = document.querySelector("div#us_dateStart > input").getAttribute("data-date");
     let dateEnd = document.querySelector("div#us_dateEnd > input").getAttribute("data-date");
     let search = document.querySelector("div#us_userPageOptionTop input[type=search]").value;
@@ -272,7 +278,7 @@
     let uid = app.current.user.data.id;
     let name = app.current.user.data.attributes.username;
 
-    let url = `https://kater.me/api/discussions?filter[user]=${uid}&filter[q]=${search} author:${name} created:${dateStart}..${dateEnd}&sort=${sort}&page[offset]=${offset}`;
+    let url = `https://kater.me/api/discussions?filter[user]=${uid}&filter[q]=${tagString}${search} author:${name} created:${dateStart}..${dateEnd}&sort=${sort}&page[offset]=${offset}`;
 
     let list = document.querySelector("ul.DiscussionList-discussions");
     list.setAttribute("data-offset", offset);
@@ -417,10 +423,54 @@
 
   // 個人頁面排序討論 - 選項 (v0.5.6)
   function insertDiscussionOpt() {
+
+    let tagTable = `<table id="us_tagsTable">`;
+    let tableCount = 1;
+    let columns = 6;
+    for (let [key, tag] of Object.entries(app.store.data.tags)) {
+      if (tableCount == 1) {
+        tagTable += "<tr>";
+      }
+      tagTable += `
+        <td style="width: calc(100% / ${columns}); user-selct: none; cursor: pointer;" data-tag="${key}">
+          <span class="TagsLabel" style="display: inline-block; width: 100%;">
+            <span class="TagLabel colored" style="color: ${tag.data.attributes.color}; background-color: ${tag.data.attributes.color}; opacity: 0.2; width: calc(100% - 8px); margin: 2px 4px;">
+              <span class="TagLabel-text" style="text-overflow: ellipsis; width: 100%; display: block; overflow: hidden; white-space: nowrap;">
+                <i class="icon ${tag.data.attributes.icon}"></i> 
+                ${tag.data.attributes.name}
+              </span>
+            </span>
+          </span>
+        </td>
+      `;
+      if (tableCount == columns) {
+        tagTable += "</tr>";
+        tableCount = 1;
+      } else {
+        tableCount++;
+      }
+    }
+    tagTable += "</table>";
+
     let optionTop = `
       <div id="us_userPageOptionTop" style="margin-bottom: 1rem;">
+        
+        <!-- 篩選節點 -->
         <div class="ButtonGroup Dropdown dropdown itemCount2" style="vertical-align: initial;">
-          <button class="Dropdown-toggle Button" data-toggle="dropdown" aria-expanded="false">
+          <button id="us_tagFilter" class="Dropdown-toggle Button" data-tags="[]" data-toggle="dropdown" aria-expanded="false">
+            <span class="Button-label">篩選節點</span>
+            <i class="icon fas fa-caret-down Button-caret"></i>
+          </button>
+          <ul class="Dropdown-menu dropdown-menu" style="width: 500px;">
+            <li>
+              ${tagTable}
+            </li>
+          </ul>
+        </div>
+
+        <!-- 排序依據 -->
+        <div class="ButtonGroup Dropdown dropdown itemCount2" style="vertical-align: initial; padding-left: 1rem;">
+          <button id="us_sort" class="Dropdown-toggle Button" data-toggle="dropdown" aria-expanded="false">
             <span class="Button-label">最新討論</span>
             <i class="icon fas fa-caret-down Button-caret"></i>
           </button>
@@ -448,11 +498,15 @@
             </li>
           </ul>
         </div>
+
+        <!-- 搜尋文字 -->
         <div class="Search" style="display: inline-block; padding-left: 1rem;">
           <div class="Search-input">
             <input class="FormControl" type="search" placeholder="搜尋" title="不能搜尋英文數字跟冒號，避免觸發系統搜尋問題" style="width: 8rem;">
           </div>
         </div>
+
+        <!-- 搜尋日期區間 -->
         <div class="Search" style="display: inline-block; padding-left: 1rem;">
           <div id="us_dateStart" class="Search-input">
             <input class="FormControl" placeholder="起始日期" style="width: 9rem;">  
@@ -538,9 +592,36 @@
       document.querySelector("div.DiscussionList-loadMore").style.display = "none";
     } catch (e) {}
 
-    // 上選單點擊事件
+    // 上選單：篩選節點點擊事件
+    let tagButtons = document.querySelectorAll("table#us_tagsTable td");
+    let tagSelected = document.querySelector("div#us_userPageOptionTop #us_tagFilter");
+    tagButtons.forEach(function (tagTd) {
+      tagTd.addEventListener("click", function (e) {
+        let button = tagTd.querySelector("span.TagLabel.colored");
+        let id = parseInt(tagTd.getAttribute("data-tag"));
+        let selected = JSON.parse(tagSelected.getAttribute("data-tags"));
+
+        if (selected.includes(id)) {
+          // 若已選
+          let index = selected.indexOf(id);
+          selected.splice(index, 1);
+          button.style.opacity = "0.2";
+        } else {
+          // 若未選
+          selected.push(id);
+          button.style.opacity = "1";
+        }
+
+        tagSelected.setAttribute("data-tags", JSON.stringify(selected));
+        discussionSort();
+      });
+    });
+
+    // 上選單：篩選節點點擊事件 結束
+
+    // 上選單：排序點擊事件
     let sortList = document.querySelectorAll("div#us_userPageOptionTop ul button");
-    let selected = document.querySelector("div#us_userPageOptionTop button.Dropdown-toggle > span");
+    let selected = document.querySelector("div#us_userPageOptionTop #us_sort > span");
 
     sortList.forEach(function (each) {
       each.addEventListener("click", function (e) {
@@ -555,7 +636,7 @@
         discussionSort();
       })
     });
-    // 上選單點擊事件 結束
+    // 上選單：排序點擊事件 結束
 
     // 搜尋框事件 
     let searchInput = document.querySelector("div#us_userPageOptionTop input[type=search]");
@@ -617,7 +698,7 @@
     let block = `
       <div id="us_messageBlock" data-id="${randomID}" class="AlertManager">
         <div class="AlertManager-alert">
-          <div class="Alert Alert--${typeField[type]}" style="position: fixed; top: 2rem; right: 2rem; width: 10rem;">
+          <div class="Alert Alert--${typeField[type]}" style="position: fixed; top: 2rem; right: 2rem; width: 16rem;">
             <span class="Alert-body">${msg}</span>
           </div>
         </div>
