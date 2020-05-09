@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.16
+// @version      0.5.17
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -434,8 +434,8 @@
       tagTable += `
         <td style="width: calc(100% / ${columns}); user-selct: none; cursor: pointer;" data-tag="${key}">
           <span class="TagsLabel" style="display: inline-block; width: 100%;">
-            <span class="TagLabel colored" style="color: ${tag.data.attributes.color}; background-color: ${tag.data.attributes.color}; opacity: 0.2; width: calc(100% - 8px); margin: 2px 4px;">
-              <span class="TagLabel-text" style="text-overflow: ellipsis; width: 100%; display: block; overflow: hidden; white-space: nowrap;">
+            <span class="TagLabel colored" style="color: ${tag.data.attributes.color}; background-color: ${tag.data.attributes.color}; opacity: 0.35; width: calc(100% - 8px); margin: 2px 4px;">
+              <span class="TagLabel-text" style="text-overflow: ellipsis; width: 100%; display: block; overflow: hidden; white-space: nowrap; color: #fff !important">
                 <i class="icon ${tag.data.attributes.icon}"></i> 
                 ${tag.data.attributes.name}
               </span>
@@ -605,7 +605,7 @@
           // 若已選
           let index = selected.indexOf(id);
           selected.splice(index, 1);
-          button.style.opacity = "0.2";
+          button.style.opacity = "0.35";
         } else {
           // 若未選
           selected.push(id);
