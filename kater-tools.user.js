@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.17
+// @version      0.5.18
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -424,17 +424,19 @@
   // 個人頁面排序討論 - 選項 (v0.5.6)
   function insertDiscussionOpt() {
 
-    let tagTable = `<table id="us_tagsTable">`;
+    let tagTable = `<table id="us_tagsTable" style="background-color: #333;">`;
     let tableCount = 1;
     let columns = 6;
     for (let [key, tag] of Object.entries(app.store.data.tags)) {
       if (tableCount == 1) {
         tagTable += "<tr>";
       }
+      let color = (tag.data.attributes.color == "")? "#333" : tag.data.attributes.color;
+
       tagTable += `
         <td style="width: calc(100% / ${columns}); user-selct: none; cursor: pointer;" data-tag="${key}">
           <span class="TagsLabel" style="display: inline-block; width: 100%;">
-            <span class="TagLabel colored" style="color: ${tag.data.attributes.color}; background-color: ${tag.data.attributes.color}; opacity: 0.35; width: calc(100% - 8px); margin: 2px 4px;">
+            <span class="TagLabel colored" style="color: ${color}; background-color: ${color}; opacity: 0.35; width: calc(100% - 8px); margin: 2px 4px;">
               <span class="TagLabel-text" style="text-overflow: ellipsis; width: 100%; display: block; overflow: hidden; white-space: nowrap; color: #fff !important">
                 <i class="icon ${tag.data.attributes.icon}"></i> 
                 ${tag.data.attributes.name}
