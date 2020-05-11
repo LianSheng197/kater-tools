@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.18
+// @version      0.5.19
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -19,7 +19,7 @@
 // @require      https://cdn.jsdelivr.net/npm/pikaday/pikaday.js
 // @require      https://greasyfork.org/scripts/14208-datejs/code/Datejs.js
 
-// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.6 可正常使用 （這裡的版本爲作者測試過的最後版本）
+// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.19 可正常使用 （這裡的版本爲作者測試過的最後版本）
 // @compatible   firefox Firefox 70 + Tampermonkey + v0.4.1 可正常使用 （這裡的版本爲作者測試過的最後版本）
 
 // @license      MIT
@@ -258,7 +258,15 @@
     minCount: {
       link: "commentCount",
       name: "乏人問津"
-    }
+    },
+    maxView: {
+      link: "-view_count",
+      name: "最多瀏覽"
+    },
+    minView: {
+      link: "view_count",
+      name: "最少瀏覽"
+    },
   };
 
   function discussionSort(offset = 0) {
@@ -453,6 +461,24 @@
       }
     }
     tagTable += "</table>";
+    
+    let sortButton = `
+      <button active="true" class="hasIcon" type="button" data-sort="latest">
+        <i class="icon fas fa-check Button-icon"></i>
+        <span class="Button-label">最新討論</span>
+      </button>
+    `;
+    for (let [key, button] of Object.entries(sortField)) {
+      if(key == "latest"){
+        continue;
+      } else {
+        sortButton += `
+          <button class="hasIcon" type="button" data-sort="${key}">
+            <span class="Button-label">${button.name}</span>
+          </button>
+        `;
+      }
+    }
 
     let optionTop = `
       <div id="us_userPageOptionTop" style="margin-bottom: 1rem;">
@@ -478,25 +504,7 @@
           </button>
           <ul class="Dropdown-menu dropdown-menu">
             <li class="">
-              <button active="true" class="hasIcon" type="button" data-sort="latest">
-                <i class="icon fas fa-check Button-icon"></i>
-                <span class="Button-label">最新討論</span>
-              </button>
-              <button class="hasIcon" type="button" data-sort="oldest">
-                <span class="Button-label">最舊討論</span>
-              </button>
-              <button class="hasIcon" type="button" data-sort="latestPost">
-                <span class="Button-label">近期回覆</span>
-              </button>
-              <button class="hasIcon" type="button" data-sort="oldestPost">
-                <span class="Button-label">考古專用</span>
-              </button>
-              <button class="hasIcon" type="button" data-sort="maxCount">
-                <span class="Button-label">最多回覆</span>
-              </button>
-              <button class="hasIcon" type="button" data-sort="minCount">
-                <span class="Button-label">乏人問津</span>
-              </button>
+              ${sortButton}
             </li>
           </ul>
         </div>
