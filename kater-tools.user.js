@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.20
+// @version      0.5.21
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -493,6 +493,11 @@
             <li>
               ${tagTable}
             </li>
+            <li>
+              <button id="us_tagFilterRun" type="button">
+                <span class="Button-label" style="color: orange; font-weight: bold; font-size: 1.5rem; padding-left: calc(50% - 1.5rem);">篩選</span>
+              </button>
+            </li>
           </ul>
         </div>
 
@@ -503,7 +508,7 @@
             <i class="icon fas fa-caret-down Button-caret"></i>
           </button>
           <ul class="Dropdown-menu dropdown-menu">
-            <li class="">
+            <li>
               ${sortButton}
             </li>
           </ul>
@@ -604,7 +609,21 @@
 
     // 上選單：篩選節點點擊事件
     let tagButtons = document.querySelectorAll("table#us_tagsTable td");
+    let runButton = document.querySelector("button#us_tagFilterRun");
     let tagSelected = document.querySelector("div#us_userPageOptionTop #us_tagFilter");
+    let tagArea = document.querySelector("table#us_tagsTable");
+
+    // 避免點擊導致跳開
+    tagArea.addEventListener("click", function (e){
+      e.stopPropagation();
+    });
+
+    // 執行篩選
+    runButton.addEventListener("click", function (e){
+      discussionSort();
+    });
+
+    // 個別 tag 按鈕
     tagButtons.forEach(function (tagTd) {
       tagTd.addEventListener("click", function (e) {
         let button = tagTd.querySelector("span.TagLabel.colored");
@@ -623,14 +642,13 @@
         }
 
         tagSelected.setAttribute("data-tags", JSON.stringify(selected));
-        discussionSort();
       });
     });
 
     // 上選單：篩選節點點擊事件 結束
 
     // 上選單：排序點擊事件
-    let sortList = document.querySelectorAll("div#us_userPageOptionTop ul button");
+    let sortList = document.querySelector("button#us_sort").parentNode.querySelectorAll("ul button");
     let selected = document.querySelector("div#us_userPageOptionTop #us_sort > span");
 
     sortList.forEach(function (each) {
