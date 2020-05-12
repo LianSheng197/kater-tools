@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.19
+// @version      0.5.20
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -715,7 +715,7 @@
       </div>
     `;
 
-    document.querySelector("div#us_messageArea").innerHTML += block;
+    addHTML(block, "div#us_messageArea", "beforeend");
 
     // 不能使用 setTimeout 或 setInterval （會卡死其他部件）
     // 而此類腳本也不便於利用 worker
@@ -814,7 +814,8 @@
       }
 
       if (document.querySelectorAll("div#us_messageArea").length == 0) {
-        document.querySelector("div#app").innerHTML += `<div id="us_messageArea"></div>`
+        let area = `<div id="us_messageArea"></div>`;
+        addHTML(area, "div#app", "beforeend");
       }
 
       // 訊息框自動刪除（詳見 message()）
