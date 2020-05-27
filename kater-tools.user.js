@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.22
+// @version      0.5.23
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -31,6 +31,15 @@
 // 0.5.5 起，還是回到常規做法... XD
 
 (function () {
+  // v0.5.23 新增，選擇結束日期自動加一天
+  // Date.addDays(days)
+  Date.prototype.addDays = function(days) {
+    var date = new Date(this.valueOf());
+    date.setDate(date.getDate() + days);
+    return date;
+  }
+
+
   // 更改界面語系 (v0.1)
   // 用 fetch 改寫。統一整體腳本風格 (v0.3.2)
   function changeLang() {
@@ -279,7 +288,7 @@
 
     let tags = JSON.parse(document.querySelector("button#us_tagFilter").getAttribute("data-tags"));
     let tagString = "";
-    tags.forEach(function(tag){
+    tags.forEach(function (tag) {
       tagString += `tag:${app["store"]["data"]["tags"][tag]["data"]["attributes"]["slug"]} `;
     });
 
@@ -444,7 +453,7 @@
       if (tableCount == 1) {
         tagTable += "<tr>";
       }
-      let color = (tag.data.attributes.color == "")? "#333" : tag.data.attributes.color;
+      let color = (tag.data.attributes.color == "") ? "#333" : tag.data.attributes.color;
 
       tagTable += `
         <td style="width: calc(100% / ${columns}); user-selct: none; cursor: pointer;" data-tag="${key}">
@@ -466,7 +475,7 @@
       }
     }
     tagTable += "</table>";
-    
+
     let sortButton = `
       <button active="true" class="hasIcon" type="button" data-sort="latest">
         <i class="icon fas fa-check Button-icon"></i>
@@ -474,7 +483,7 @@
       </button>
     `;
     for (let [key, button] of Object.entries(sortField)) {
-      if(key == "latest"){
+      if (key == "latest") {
         continue;
       } else {
         sortButton += `
@@ -554,6 +563,7 @@
     // 我不太會用 Pikaday 的初始化選項，某些目的只好硬幹
     let dateStart = document.querySelector("div#us_dateStart > input");
     let dateEnd = document.querySelector("div#us_dateEnd > input");
+    let dateNowObj = new Date();
 
     new Pikaday({
       field: dateStart,
@@ -561,7 +571,7 @@
       setDefaultDate: true,
       defaultDate: new Date("2019-10-17"),
       minDate: new Date("2019-10-17"),
-      maxDate: new Date(),
+      maxDate: dateNowObj,
       i18n: {
         previousMonth: '上月',
         nextMonth: '下月',
@@ -581,9 +591,9 @@
       field: dateEnd,
       format: 'YYYY-MM-DD',
       setDefaultDate: true,
-      defaultDate: new Date(),
+      defaultDate: dateNowObj.addDays(1),
       minDate: new Date("2019-10-17"),
-      maxDate: new Date(),
+      maxDate: dateNowObj,
       i18n: {
         previousMonth: '上月',
         nextMonth: '下月',
@@ -592,7 +602,9 @@
         weekdaysShort: ['日', '一', '二', '三', '四', '五', '六']
       },
       onSelect: function () {
-        let date = Date.parse(this._d).toString("yyyy-MM-dd");
+        let date = Date.parse(this._d);
+        // date.setDate(date.getDate() + 1);
+        date = date.addDays(1).toString("yyyy-MM-dd");
         dateEnd.value = date;
         dateEnd.setAttribute("data-date", date);
         discussionSort();
@@ -602,7 +614,7 @@
     dateStart.value = "";
     dateEnd.value = "";
     dateStart.setAttribute("data-date", Date.parse(new Date("2019-10-17")).toString("yyyy-MM-dd"));
-    dateEnd.setAttribute("data-date", Date.parse(new Date()).toString("yyyy-MM-dd"));
+    dateEnd.setAttribute("data-date", Date.parse(dateNowObj.addDays(1)).toString("yyyy-MM-dd"));
 
     // Pikaday 日期選擇器 結束
 
@@ -619,12 +631,12 @@
     let tagArea = document.querySelector("table#us_tagsTable");
 
     // 避免點擊導致跳開
-    tagArea.addEventListener("click", function (e){
+    tagArea.addEventListener("click", function (e) {
       e.stopPropagation();
     });
 
     // 執行篩選
-    runButton.addEventListener("click", function (e){
+    runButton.addEventListener("click", function (e) {
       discussionSort();
     });
 
