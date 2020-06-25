@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.23
+// @version      0.5.24
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
 // @include      https://kater.me/*
 // @exclude      https://kater.me/api/*
+// @exclude      https://kater.me/assets/*
 
 // @grant        GM_registerMenuCommand
 // @grant        GM_info
@@ -17,9 +18,8 @@
 // @require      https://greasyfork.org/scripts/402133-toolbox/code/Toolbox.js
 // @require      https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js
 // @require      https://cdn.jsdelivr.net/npm/pikaday/pikaday.js
-// @require      https://greasyfork.org/scripts/14208-datejs/code/Datejs.js
 
-// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.19 可正常使用 （這裡的版本爲作者測試過的最後版本）
+// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.24 可正常使用 （這裡的版本爲作者測試過的最後版本）
 // @compatible   firefox Firefox 70 + Tampermonkey + v0.4.1 可正常使用 （這裡的版本爲作者測試過的最後版本）
 
 // @license      MIT
@@ -33,12 +33,11 @@
 (function () {
   // v0.5.23 新增，選擇結束日期自動加一天
   // Date.addDays(days)
-  Date.prototype.addDays = function(days) {
+  Date.prototype.addDays = function (days) {
     var date = new Date(this.valueOf());
     date.setDate(date.getDate() + days);
     return date;
   }
-
 
   // 更改界面語系 (v0.1)
   // 用 fetch 改寫。統一整體腳本風格 (v0.3.2)
@@ -411,8 +410,8 @@
 
               </div><a class="Slidable-underneath Slidable-underneath--left Slidable-underneath--elastic disabled"><i
                   class="icon fas fa-check "></i></a>
-              <div class="DiscussionListItem-content Slidable-content read"><a href="/u/144" class="DiscussionListItem-author"
-                  title="" data-original-title="Van⦗qu⦘ish⁇ 發佈於 14 小時前"><img class="Avatar "
+              <div class="DiscussionListItem-content Slidable-content read"><a href="/u/${discussion.relationships.user.data.id}" class="DiscussionListItem-author"
+                  title="${json["users"][discussion.relationships.user.data.id]["attributes"]["username"]} 發佈於 ${datetimeFormat(discussion.attributes.createdAt)}"><img class="Avatar "
                     src="${json["users"][discussion.relationships.user.data.id]["attributes"]["avatarUrl"]}"></a>
                 ${follow}                           
                 <a href="/d/${discussion.id}" class="DiscussionListItem-main">
@@ -440,6 +439,7 @@
       message("請求已完成", 0);
     }).catch(function (e) {
       message("取得資料時遇到錯誤！", 2);
+      throw new Error(e);
     });
   }
 
@@ -580,7 +580,7 @@
         weekdaysShort: ['日', '一', '二', '三', '四', '五', '六']
       },
       onSelect: function () {
-        let date = Date.parse(this._d).toString("yyyy-MM-dd");
+        let date = datetimeFormat(Date.parse(this._d), true);
         dateStart.value = date;
         dateStart.setAttribute("data-date", date);
         discussionSort();
@@ -602,9 +602,8 @@
         weekdaysShort: ['日', '一', '二', '三', '四', '五', '六']
       },
       onSelect: function () {
-        let date = Date.parse(this._d);
-        // date.setDate(date.getDate() + 1);
-        date = date.addDays(1).toString("yyyy-MM-dd");
+        let date = new Date(this._d);
+        date = datetimeFormat(date.addDays(1), true);
         dateEnd.value = date;
         dateEnd.setAttribute("data-date", date);
         discussionSort();
@@ -613,8 +612,8 @@
 
     dateStart.value = "";
     dateEnd.value = "";
-    dateStart.setAttribute("data-date", Date.parse(new Date("2019-10-17")).toString("yyyy-MM-dd"));
-    dateEnd.setAttribute("data-date", Date.parse(dateNowObj.addDays(1)).toString("yyyy-MM-dd"));
+    dateStart.setAttribute("data-date", "2019-10-17");
+    dateEnd.setAttribute("data-date", datetimeFormat(Date.parse(dateNowObj.addDays(1)), true));
 
     // Pikaday 日期選擇器 結束
 
@@ -705,31 +704,23 @@
     });
   }
 
-  function localeTime(timeCreatedAt, human = false) {
-    if (human) {
-      return Date.parse(new Date("2020-05-02T10:21:38+00:00")).toString("yyyy-MM-dd HH:mm:ss");
-    } else {
-      return Date.parse(new Date("2020-05-02T10:21:38+00:00")).toString("yyyy-MM-ddTHH:mm:ss+08:00");
-    }
-  }
+  function datetimeFormat(timeString, dateOnly = false) {
+    let d = new Date(timeString);
+    let yyyy = d.getFullYear();
+    let MM = `0${d.getMonth()+1}`.substr(-2);
+    let dd = `0${d.getDate()}`.substr(-2);
+    let hh = `0${d.getHours()}`.substr(-2);
+    let mm = `0${d.getMinutes()}`.substr(-2);
+    let ss = `0${d.getSeconds()}`.substr(-2);
+    let result = "";
 
-  function timeAgo(timeCreatedAt) {
-    let now = new Date();
-    let create = new Date(timeCreatedAt);
-    let ms = now - create;
-    let s = parseInt(ms / 1000);
-
-    if (s > 7 * 24 * 60 * 60) {
-      return Date.parse(create).toString("yyyy/MM/dd HH:mm:ss");
-    } else if (s > 24 * 60 * 60) {
-      return `${parseInt((s/24/60/60).toString())} 天前`;
-    } else if (s > 60 * 60) {
-      return `${parseInt((s/60/60).toString())} 小時前`;
-    } else if (s > 60) {
-      return `${parseInt((s/60).toString())} 分前`;
+    if (dateOnly) {
+      result = `${yyyy}-${MM}-${dd}`;
     } else {
-      return `${s} 秒前`;
+      result = `${yyyy}/${MM}/${dd} ${hh}:${mm}:${ss}`;
     }
+
+    return result;
   }
 
   // 訊息框，採用原生樣式 (Alert)，只是放到右上角
@@ -793,9 +784,11 @@
           // 自定義搜尋框
           if (document.querySelectorAll("div#us_display").length == 0) {
             let appendDisplay = `<div id="us_display" style="cursor: pointer; user-select: none; display: inline-block; width: 10rem; min-width: min-content; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88; font-weight: bold;">用 UID 搜尋要標註的人</div><div><input id="us_searchUid" style="width: 100%; text-align: center;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ccc; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block;">Username</div></td></tr></table></div><input id="us_hiddenInput" style="display: none;"></div>`;
-            addHTML(appendDisplay, "ul.TextEditor-controls.Composer-footer", "beforeend");
-            display = document.querySelector("div#us_display");
-            display.style.display = "none";
+            if (document.querySelectorAll("ul.TextEditor-controls.Composer-footer").length != 0) {
+              addHTML(appendDisplay, "ul.TextEditor-controls.Composer-footer", "beforeend");
+              display = document.querySelector("div#us_display");
+              display.style.display = "none";
+            }
           }
           // 自定義搜尋按鈕
           if (document.querySelectorAll("button#us_tagByUid").length == 0) {
@@ -850,7 +843,9 @@
 
       if (document.querySelectorAll("div#us_messageArea").length == 0) {
         let area = `<div id="us_messageArea"></div>`;
-        addHTML(area, "div#app", "beforeend");
+        if (document.querySelectorAll("div#app").length != 0) {
+          addHTML(area, "div#app", "beforeend");
+        }
       }
 
       // 訊息框自動刪除（詳見 message()）
