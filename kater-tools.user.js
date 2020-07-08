@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.27
+// @version      0.5.28
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -123,10 +123,6 @@
       let textarea = document.querySelector("textarea.FormControl.Composer-flexible");
       insertAtCursor(textarea, `@${name} `);
 
-      result_avatar.style.background = "#ccc";
-      input.value = "";
-      result_name.innerText = "Username";
-      display.style.display = "none";
       textarea.focus();
     }
 
@@ -153,25 +149,29 @@
           result_avatar.style.background = "#ccc";
         }
 
-        result_name.innerText = name;
+        result_name.innerText = `(${uid}) ${name}`;
 
         result.onclick = () => {
           userSelected(name);
+          input.value = "";
+          display.style.display = "none";
         }
         input.onkeydown = e => {
           if (e.keyCode == 13) {
             userSelected(name);
+            input.value = "";
+            display.style.display = "none";
           }
         }
 
         isOpen = true;
 
-        if(lastSearch > 0 && lastSearch != uid) {
+        if (lastSearch >= 0 && lastSearch != uid) {
           let uid = lastSearch;
           lastSearch = -1;
-          mentionUserById(uid);          
+          mentionUserById(uid);
         }
-      });      
+      });
     } else {
       lastSearch = uid;
     }
@@ -816,7 +816,7 @@
           let display, button;
           // 自定義搜尋框
           if (document.querySelectorAll("div#us_display").length == 0) {
-            let appendDisplay = `<div id="us_display" style="cursor: pointer; user-select: none; display: inline-block; width: 10rem; min-width: min-content; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88; font-weight: bold;">用 UID 搜尋要標註的人</div><div><input id="us_searchUid" style="width: 100%; text-align: center; color: #000;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ccc; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block; color: #000;">Username</div></td></tr></table></div><input id="us_hiddenInput" style="display: none;"></div>`;
+            let appendDisplay = `<div id="us_display" style="cursor: pointer; user-select: none; display: inline-block; width: 10rem; min-width: 200px;max-width: 200px; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88; font-weight: bold;">用 UID 搜尋要標註的人</div><div><input id="us_searchUid" style="width: 100%; text-align: center; color: #000;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ccc; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block; color: #000;">Username</div></td></tr></table></div><input id="us_hiddenInput" style="display: none;"></div>`;
             if (document.querySelectorAll("ul.TextEditor-controls.Composer-footer").length != 0) {
               addHTML(appendDisplay, "ul.TextEditor-controls.Composer-footer", "beforeend");
               display = document.querySelector("div#us_display");
@@ -842,7 +842,7 @@
                 input.value = input.value.replace(/[^0-9]/g, "");
                 let search = parseInt(input.value);
 
-                if (search != "") {
+                if (search !== "") {
                   if (search <= max_uid) {
                     mentionUserById(search);
                   }
