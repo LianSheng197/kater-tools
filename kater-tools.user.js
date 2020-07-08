@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.26
+// @version      0.5.27
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -18,7 +18,7 @@
 // @require      https://greasyfork.org/scripts/402133-toolbox/code/Toolbox.js
 // @require      https://cdn.jsdelivr.net/npm/pikaday/pikaday.js
 
-// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.26 可正常使用 （這裡的版本爲作者測試過的最後版本）
+// @compatible   chrome Chrome 83 + Tampermonkey + v0.5.27 可正常使用 （這裡的版本爲作者測試過的最後版本）
 // @compatible   firefox Firefox 70 + Tampermonkey + v0.4.1 可正常使用 （這裡的版本爲作者測試過的最後版本）
 
 // @license      MIT
@@ -101,6 +101,9 @@
 
   // 用 UID 提及使用者 (v0.3)
   // v0.5.26 解決貼上問題，刪除 ClipboardJS 的引用，由點擊或是 enter 事件觸發。
+  let isOpen = true;
+  let lastSearch = -1;
+
   function mentionUserById(uid) {
 
     // 從游標位置插入文字
@@ -127,40 +130,52 @@
       textarea.focus();
     }
 
-    let display = document.querySelector("div#us_display");
-    let input = document.querySelector("input#us_searchUid")
-    let result = document.querySelector("div#us_result");
-    let result_avatar = document.querySelector("div#us_resultAvatar");
-    let result_name = document.querySelector("div#us_resultName");
+    if (isOpen) {
+      isOpen = false;
 
-    fetch(`https://kater.me/api/users/${uid}`).then(function (response) {
-      return response.json();
-    }).then(function (json) {
-      let avatar = json.data.attributes.avatarUrl;
-      let avatar_exist = (typeof avatar != typeof null);
-      let name = json.data.attributes.displayName;
+      let display = document.querySelector("div#us_display");
+      let input = document.querySelector("input#us_searchUid")
+      let result = document.querySelector("div#us_result");
+      let result_avatar = document.querySelector("div#us_resultAvatar");
+      let result_name = document.querySelector("div#us_resultName");
 
-      if (avatar_exist) {
-        result_avatar.style.background = `url("${avatar}")`;
-        result_avatar.style.backgroundSize = "contain";
-      } else {
-        result_avatar.style.background = "#ccc";
-      }
+      fetch(`https://kater.me/api/users/${uid}`).then(function (response) {
+        return response.json();
+      }).then(function (json) {
+        let avatar = json.data.attributes.avatarUrl;
+        let avatar_exist = (typeof avatar != typeof null);
+        let name = json.data.attributes.displayName;
 
-      result_name.innerText = name;
+        if (avatar_exist) {
+          result_avatar.style.background = `url("${avatar}")`;
+          result_avatar.style.backgroundSize = "contain";
+        } else {
+          result_avatar.style.background = "#ccc";
+        }
 
-      result.onclick = () => {
-        userSelected(name);
-      }
-      input.onkeydown = e => {
-        if (e.keyCode == 13) {
+        result_name.innerText = name;
+
+        result.onclick = () => {
           userSelected(name);
         }
-      }
-    });    
+        input.onkeydown = e => {
+          if (e.keyCode == 13) {
+            userSelected(name);
+          }
+        }
+
+        isOpen = true;
+
+        if(lastSearch > 0 && lastSearch != uid) {
+          let uid = lastSearch;
+          lastSearch = -1;
+          mentionUserById(uid);          
+        }
+      });      
+    } else {
+      lastSearch = uid;
+    }
   }
-
-
 
   // 個人頁面排序貼文 (v0.5.5) (以原生方式改寫於 v0.5.15，感謝大杯鮮奶茶)
   function postSort(uid, sort, sortField, offset = 0) {
