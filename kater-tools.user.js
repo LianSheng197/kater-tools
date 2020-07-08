@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.24
+// @version      0.5.25
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -831,13 +831,15 @@
 
       // 貼文
       if (document.querySelectorAll("div.sideNavContainer div.PostsUserPage").length != 0 &&
-        document.querySelectorAll("div.PostsUserPage div#us_userPageOptionTop").length == 0) {
+        document.querySelectorAll("div.PostsUserPage div#us_userPageOptionTop").length == 0 && 
+        location.pathname.match(/mentions$/) == null) {
         insertPostOpt();
       }
 
       // 討論
       if (document.querySelectorAll("div.sideNavContainer div.DiscussionsUserPage").length != 0 &&
-        document.querySelectorAll("div.DiscussionsUserPage div#us_userPageOptionTop").length == 0) {
+        document.querySelectorAll("div.DiscussionsUserPage div#us_userPageOptionTop").length == 0 && 
+        location.pathname.match(/discussions$/) != null ) {
         insertDiscussionOpt();
       }
 
