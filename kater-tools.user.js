@@ -16,10 +16,9 @@
 // @noframes
 
 // @require      https://greasyfork.org/scripts/402133-toolbox/code/Toolbox.js
-// @require      https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/2.0.4/clipboard.min.js
 // @require      https://cdn.jsdelivr.net/npm/pikaday/pikaday.js
 
-// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.24 可正常使用 （這裡的版本爲作者測試過的最後版本）
+// @compatible   chrome Chrome 71 + Tampermonkey + v0.5.26 可正常使用 （這裡的版本爲作者測試過的最後版本）
 // @compatible   firefox Firefox 70 + Tampermonkey + v0.4.1 可正常使用 （這裡的版本爲作者測試過的最後版本）
 
 // @license      MIT
@@ -101,9 +100,33 @@
   }
 
   // 用 UID 提及使用者 (v0.3)
-  // 暫時以僅複製爲解法，使用者需自行貼上（避免一些奇怪問題）
+  // v0.5.26 解決貼上問題，刪除 ClipboardJS 的引用，由點擊或是 enter 事件觸發。
   function mentionUserById(uid) {
-    let footer = document.querySelector("ul.TextEditor-controls.Composer-footer");
+
+    // 從游標位置插入文字
+    function insertAtCursor(textarea, value) {
+      let startPos = textarea.selectionStart;
+      let endPos = textarea.selectionEnd;
+      textarea.value = textarea.value.substring(0, startPos) +
+        value +
+        textarea.value.substring(endPos, textarea.value.length);
+
+      textarea.selectionEnd = endPos + value.length;
+      textarea.dispatchEvent(new Event("input"));
+    }
+
+    // 選擇要標註的使用者
+    function userSelected(name) {
+      let textarea = document.querySelector("textarea.FormControl.Composer-flexible");
+      insertAtCursor(textarea, `@${name} `);
+
+      result_avatar.style.background = "#ccc";
+      input.value = "";
+      result_name.innerText = "Username";
+      display.style.display = "none";
+      textarea.focus();
+    }
+
     let display = document.querySelector("div#us_display");
     let input = document.querySelector("input#us_searchUid")
     let result = document.querySelector("div#us_result");
@@ -116,7 +139,6 @@
       let avatar = json.data.attributes.avatarUrl;
       let avatar_exist = (typeof avatar != typeof null);
       let name = json.data.attributes.displayName;
-      let clipboard = new ClipboardJS(result);
 
       if (avatar_exist) {
         result_avatar.style.background = `url("${avatar}")`;
@@ -126,23 +148,19 @@
       }
 
       result_name.innerText = name;
-      result.setAttribute("data-clipboard-text", `@${name}`);
 
-      result.onclick = function () {
-        let textarea = document.querySelector("textarea.FormControl.Composer-flexible");
-        textarea.focus();
-        clipboard.destroy();
-
-        result_avatar.style.background = "#ccc";
-        result_name.innerText = "已複製";
-        setTimeout(function () {
-          input.value = "";
-          result_name.innerText = "Username";
-          display.style.display = "none";
-        }, 1000);
+      result.onclick = () => {
+        userSelected(name);
       }
-    });
+      input.onkeydown = e => {
+        if (e.keyCode == 13) {
+          userSelected(name);
+        }
+      }
+    });    
   }
+
+
 
   // 個人頁面排序貼文 (v0.5.5) (以原生方式改寫於 v0.5.15，感謝大杯鮮奶茶)
   function postSort(uid, sort, sortField, offset = 0) {
@@ -783,7 +801,7 @@
           let display, button;
           // 自定義搜尋框
           if (document.querySelectorAll("div#us_display").length == 0) {
-            let appendDisplay = `<div id="us_display" style="cursor: pointer; user-select: none; display: inline-block; width: 10rem; min-width: min-content; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88; font-weight: bold;">用 UID 搜尋要標註的人</div><div><input id="us_searchUid" style="width: 100%; text-align: center;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ccc; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block;">Username</div></td></tr></table></div><input id="us_hiddenInput" style="display: none;"></div>`;
+            let appendDisplay = `<div id="us_display" style="cursor: pointer; user-select: none; display: inline-block; width: 10rem; min-width: min-content; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88; font-weight: bold;">用 UID 搜尋要標註的人</div><div><input id="us_searchUid" style="width: 100%; text-align: center; color: #000;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ccc; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block; color: #000;">Username</div></td></tr></table></div><input id="us_hiddenInput" style="display: none;"></div>`;
             if (document.querySelectorAll("ul.TextEditor-controls.Composer-footer").length != 0) {
               addHTML(appendDisplay, "ul.TextEditor-controls.Composer-footer", "beforeend");
               display = document.querySelector("div#us_display");
@@ -831,15 +849,15 @@
 
       // 貼文
       if (document.querySelectorAll("div.sideNavContainer div.PostsUserPage").length != 0 &&
-        document.querySelectorAll("div.PostsUserPage div#us_userPageOptionTop").length == 0 && 
+        document.querySelectorAll("div.PostsUserPage div#us_userPageOptionTop").length == 0 &&
         location.pathname.match(/mentions$/) == null) {
         insertPostOpt();
       }
 
       // 討論
       if (document.querySelectorAll("div.sideNavContainer div.DiscussionsUserPage").length != 0 &&
-        document.querySelectorAll("div.DiscussionsUserPage div#us_userPageOptionTop").length == 0 && 
-        location.pathname.match(/discussions$/) != null ) {
+        document.querySelectorAll("div.DiscussionsUserPage div#us_userPageOptionTop").length == 0 &&
+        location.pathname.match(/discussions$/) != null) {
         insertDiscussionOpt();
       }
 
