@@ -1,14 +1,17 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.5.28
+// @version      0.6.0
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
 // @include      https://kater.me/*
+// @include      /^https?:\/\/.+?\/kater-tools\/setting\//
 // @exclude      https://kater.me/api/*
 // @exclude      https://kater.me/assets/*
 
+// @grant        GM_getValue
+// @grant        GM_setValue
 // @grant        GM_registerMenuCommand
 // @grant        GM_info
 
@@ -18,20 +21,19 @@
 // @require      https://greasyfork.org/scripts/402133-toolbox/code/Toolbox.js
 // @require      https://cdn.jsdelivr.net/npm/pikaday/pikaday.js
 
-// @compatible   chrome Chrome 83 + Tampermonkey + v0.5.27 可正常使用 （這裡的版本爲作者測試過的最後版本）
-// @compatible   firefox Firefox 70 + Tampermonkey + v0.4.1 可正常使用 （這裡的版本爲作者測試過的最後版本）
-
 // @license      MIT
 // ==/UserScript==
 
-// 0.4.1 起，所有程式碼改從外部呼叫。
-// Tampermonkey 貌似會對各個腳本做一個版本的 snapshot 之類的操作
-// 所以只要腳本不更新或重新安裝，無法透過 require 外部檔案來變更內容…
-// 0.5.5 起，還是回到常規做法... XD
+let _setting = {
+  open02overwrite: GM_getValue("0.2-overwriteUserMention_isOpen", true),
+  open03mention: GM_getValue("0.3-mentionUserById_isOpen", true),
+  open05post: GM_getValue("0.5-postSort_isOpen", true),
+  open05discussion: GM_getValue("0.5-discussionSort_isOpen", true),
+  open06: GM_getValue("0.6-_isOpen", true),
+};
 
 (function () {
   // v0.5.23 新增，選擇結束日期自動加一天
-  // Date.addDays(days)
   Date.prototype.addDays = function (days) {
     var date = new Date(this.valueOf());
     date.setDate(date.getDate() + days);
@@ -39,7 +41,6 @@
   }
 
   // 更改界面語系 (v0.1)
-  // 用 fetch 改寫。統一整體腳本風格 (v0.3.2)
   function changeLang() {
     let nowLang = app.data.locale;
     let selectLang = (nowLang == "en") ? "zh-hant" : "en";
@@ -315,6 +316,7 @@
     },
   };
 
+  // 個人頁面排序討論 (v0.5.6)
   function discussionSort(offset = 0) {
     message("正在處理請求...", 1);
 
@@ -737,6 +739,7 @@
     });
   }
 
+  // timestamp -> YYYY-MM-DD[ HH:mm:ss]
   function datetimeFormat(timeString, dateOnly = false) {
     let d = new Date(timeString);
     let yyyy = d.getFullYear();
@@ -750,7 +753,7 @@
     if (dateOnly) {
       result = `${yyyy}-${MM}-${dd}`;
     } else {
-      result = `${yyyy}/${MM}/${dd} ${hh}:${mm}:${ss}`;
+      result = `${yyyy}-${MM}-${dd} ${hh}:${mm}:${ss}`;
     }
 
     return result;
@@ -782,114 +785,133 @@
     expireMsg[randomID] = Date.now() + 2000;
   }
 
+  //-------- MAIN --------//
   (function () {
     'use strict';
-    // v0.1: 切換語言
-    GM_registerMenuCommand("切換語言", function () {
-      changeLang();
-    });
 
-    // v0.2: 覆寫提及使用者連結
-    setInterval(function () {
-      let match_nodes = document.querySelectorAll("a.UserMention:not(.overwrited)");
-      if (match_nodes.length > 0) {
-        match_nodes.forEach(function (node) {
-          overwriteUserMention(node);
-        });
-      }
-    }, 100);
+    if (location.host == "kater.me") {
+      // v0.1: 切換語言
+      GM_registerMenuCommand("切換語言", function () {
+        changeLang();
+      });
 
-    // v0.3: 用 UID 提及使用者（與原生選單共存）
-    // (重寫) 避免 MutationObserver 無限迴圈問題，改用 setInterval 偵測
-    let markold = "init";
-    let max_uid = 0;
-    fetch("https://kater.me/api/users?sort=-joinedAt&page[limit]=1").then(function (response) {
-      return response.json();
-    }).then(function (json) {
-      max_uid = json.data[0].id;
-    }).then(function () {
-      setInterval(function () {
-        // 撰寫貼文框的下方功能列
-        let nodes = document.querySelectorAll("li.TextEditor-toolbar");
-        if (nodes.length > 0) {
-          let node = nodes[0];
-          let display, button;
-          // 自定義搜尋框
-          if (document.querySelectorAll("div#us_display").length == 0) {
-            let appendDisplay = `<div id="us_display" style="cursor: pointer; user-select: none; display: inline-block; width: 10rem; min-width: 200px;max-width: 200px; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88; font-weight: bold;">用 UID 搜尋要標註的人</div><div><input id="us_searchUid" style="width: 100%; text-align: center; color: #000;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ccc; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block; color: #000;">Username</div></td></tr></table></div><input id="us_hiddenInput" style="display: none;"></div>`;
-            if (document.querySelectorAll("ul.TextEditor-controls.Composer-footer").length != 0) {
-              addHTML(appendDisplay, "ul.TextEditor-controls.Composer-footer", "beforeend");
-              display = document.querySelector("div#us_display");
-              display.style.display = "none";
-            }
-          }
-          // 自定義搜尋按鈕
-          if (document.querySelectorAll("button#us_tagByUid").length == 0) {
-            let appendButton = `<button id="us_tagByUid" class="Button Button--icon Button--link hasIcon" type="button" title="用 UID 標註他人" data-original-title="用 UID 標註他人"><i class="icon fas fa-user-tag" style="color: #e88;"></i><span class="Button-label">用 UID 標註他人</span></button>`;
-            addHTML(appendButton, "li.TextEditor-toolbar", "beforeend");
-            button = document.querySelector("button#us_tagByUid");
-            button.addEventListener("click", function (e) {
-              let input = document.querySelector("input#us_searchUid")
-              if (display.style.display == "none") {
-                display.style.display = "inline-block";
-                input.focus();
-              } else {
-                display.style.display = "none";
-                document.querySelector("textarea.FormControl.Composer-flexible").focus();
-              }
-
-              input.addEventListener("input", function (e) {
-                input.value = input.value.replace(/[^0-9]/g, "");
-                let search = parseInt(input.value);
-
-                if (search !== "") {
-                  if (search <= max_uid) {
-                    mentionUserById(search);
-                  }
-                }
-              });
+      // v0.2: 覆寫提及使用者連結
+      if (_setting["open02overwrite"]) {
+        setInterval(function () {
+          let match_nodes = document.querySelectorAll("a.UserMention:not(.overwrited)");
+          if (match_nodes.length > 0) {
+            match_nodes.forEach(function (node) {
+              overwriteUserMention(node);
             });
           }
-        }
-      }, 200);
-    });
-
-    // v0.5: 個人頁面排序
-    setInterval(function () {
-      // 添加討論日期選取器的 css 於 head
-      if (document.querySelectorAll("link#us_pikaday").length == 0) {
-        console.log("[Kater Tools] Add Pikaday");
-        addStyleLink("https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css", "us_pikaday");
+        }, 100);
       }
 
-      // 貼文
-      if (document.querySelectorAll("div.sideNavContainer div.PostsUserPage").length != 0 &&
-        document.querySelectorAll("div.PostsUserPage div#us_userPageOptionTop").length == 0 &&
-        location.pathname.match(/mentions$/) == null) {
-        insertPostOpt();
+      // v0.3: 用 UID 提及使用者（與原生選單共存）
+      if (_setting["open03mention"]) {
+        let max_uid = 0;
+        fetch("https://kater.me/api/users?sort=-joinedAt&page[limit]=1").then(function (response) {
+          return response.json();
+        }).then(function (json) {
+          max_uid = json.data[0].id;
+        }).then(function () {
+          setInterval(function () {
+            // 撰寫貼文框的下方功能列
+            let nodes = document.querySelectorAll("li.TextEditor-toolbar");
+            if (nodes.length > 0) {
+              let node = nodes[0];
+              let display, button;
+              // 自定義搜尋框
+              if (document.querySelectorAll("div#us_display").length == 0) {
+                let appendDisplay = `<div id="us_display" style="cursor: pointer; user-select: none; display: inline-block; width: 10rem; min-width: 200px;max-width: 200px; border: 2px solid #333; border-radius: 4px; position: relative; bottom: 0; right: 0; z-index: 9999; background: #eee;"><div style="border-bottom: 1px solid #000; text-align: center; user-select: none; background: #e88; font-weight: bold;">用 UID 搜尋要標註的人</div><div><input id="us_searchUid" style="width: 100%; text-align: center; color: #000;"></div><div id="us_result"><table><tr><td><div id="us_resultAvatar" style="height: 2rem; width: 2rem; display: inline-block; margin: 0.5rem; border-radius: 100px; background: #ccc; background-size: contain;"></div></td><td><div id="us_resultName" style="width: calc(100% - 3rem); display: inline-block; color: #000;">Username</div></td></tr></table></div><input id="us_hiddenInput" style="display: none;"></div>`;
+                if (document.querySelectorAll("ul.TextEditor-controls.Composer-footer").length != 0) {
+                  addHTML(appendDisplay, "ul.TextEditor-controls.Composer-footer", "beforeend");
+                  display = document.querySelector("div#us_display");
+                  display.style.display = "none";
+                }
+              }
+              // 自定義搜尋按鈕
+              if (document.querySelectorAll("button#us_tagByUid").length == 0) {
+                let appendButton = `<button id="us_tagByUid" class="Button Button--icon Button--link hasIcon" type="button" title="用 UID 標註他人" data-original-title="用 UID 標註他人"><i class="icon fas fa-user-tag" style="color: #e88;"></i><span class="Button-label">用 UID 標註他人</span></button>`;
+                addHTML(appendButton, "li.TextEditor-toolbar", "beforeend");
+                button = document.querySelector("button#us_tagByUid");
+                button.addEventListener("click", function (e) {
+                  let input = document.querySelector("input#us_searchUid")
+                  if (display.style.display == "none") {
+                    display.style.display = "inline-block";
+                    input.focus();
+                  } else {
+                    display.style.display = "none";
+                    document.querySelector("textarea.FormControl.Composer-flexible").focus();
+                  }
+
+                  input.addEventListener("input", function (e) {
+                    input.value = input.value.replace(/[^0-9]/g, "");
+                    let search = parseInt(input.value);
+
+                    if (search !== "") {
+                      if (search <= max_uid) {
+                        mentionUserById(search);
+                      }
+                    }
+                  });
+                });
+              }
+            }
+          }, 200);
+        });
       }
 
-      // 討論
-      if (document.querySelectorAll("div.sideNavContainer div.DiscussionsUserPage").length != 0 &&
-        document.querySelectorAll("div.DiscussionsUserPage div#us_userPageOptionTop").length == 0 &&
-        location.pathname.match(/discussions$/) != null) {
-        insertDiscussionOpt();
-      }
+      // v0.5: 個人頁面排序
+      if (_setting["open05post"] || _setting["open05discussion"]) {
+        setInterval(function () {
+          // 添加討論日期選取器的 css 於 head
+          if (_setting["open05discussion"]) {
+            if (document.querySelectorAll("link#us_pikaday").length == 0) {
+              console.log("[Kater Tools] Add Pikaday");
+              addStyleLink("https://cdn.jsdelivr.net/npm/pikaday/css/pikaday.css", "us_pikaday");
+            }
+          }
 
-      if (document.querySelectorAll("div#us_messageArea").length == 0) {
-        let area = `<div id="us_messageArea"></div>`;
-        if (document.querySelectorAll("div#app").length != 0) {
-          addHTML(area, "div#app", "beforeend");
-        }
-      }
+          // 貼文
+          if (_setting["open05post"]) {
+            if (document.querySelectorAll("div.sideNavContainer div.PostsUserPage").length != 0 &&
+              document.querySelectorAll("div.PostsUserPage div#us_userPageOptionTop").length == 0 &&
+              location.pathname.match(/mentions$/) == null) {
+              insertPostOpt();
+            }
+          }
 
-      // 訊息框自動刪除（詳見 message()）
-      for (let [key, value] of Object.entries(expireMsg)) {
-        if (Date.now() > value) {
-          document.querySelector(`div#us_messageBlock[data-id="${key}"]`).remove();
-          delete expireMsg[key];
-        }
+          // 討論
+          if (_setting["open05discussion"]) {
+            if (document.querySelectorAll("div.sideNavContainer div.DiscussionsUserPage").length != 0 &&
+              document.querySelectorAll("div.DiscussionsUserPage div#us_userPageOptionTop").length == 0 &&
+              location.pathname.match(/discussions$/) != null) {
+              insertDiscussionOpt();
+            }
+          }
+
+          // 訊息框區域
+          if (document.querySelectorAll("div#us_messageArea").length == 0) {
+            let area = `<div id="us_messageArea"></div>`;
+            if (document.querySelectorAll("div#app").length != 0) {
+              addHTML(area, "div#app", "beforeend");
+            }
+          }
+
+          // 訊息框自動刪除（詳見 message()）
+          for (let [key, value] of Object.entries(expireMsg)) {
+            if (Date.now() > value) {
+              document.querySelector(`div#us_messageBlock[data-id="${key}"]`).remove();
+              delete expireMsg[key];
+            }
+          }
+        }, 100);
       }
-    }, 100);
+    }
+
+    // v0.6.0 識別
+    let identification = `if (window._KT) { _KT["kater.tools"] = GM_info.script.version;} else { window._KT = {"kater.tools": "${GM_info.script.version}"}}`;
+    addScript(identification, "head");
   })();
 })();
