@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.6.0
+// @version      0.6.1
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -20,16 +20,21 @@
 
 // @require      https://greasyfork.org/scripts/402133-toolbox/code/Toolbox.js
 // @require      https://cdn.jsdelivr.net/npm/pikaday/pikaday.js
+// @require      https://unpkg.com/vanilla-picker@2
 
 // @license      MIT
 // ==/UserScript==
 
-let _setting = {
-  open02overwrite: GM_getValue("0.2-overwriteUserMention_isOpen", true),
-  open03mention: GM_getValue("0.3-mentionUserById_isOpen", true),
-  open05post: GM_getValue("0.5-postSort_isOpen", true),
-  open05discussion: GM_getValue("0.5-discussionSort_isOpen", true),
-  open06: GM_getValue("0.6-_isOpen", true),
+const _setting = {
+  open02overwrite: GM_getValue("s0.2-overwriteUserMention", true),
+  open03mention: GM_getValue("s0.3-mentionUserById", true),
+  open05post: GM_getValue("s0.5-postSort", true),
+  open05discussion: GM_getValue("s0.5-discussionSort", true),
+  open06toolbar: GM_getValue("s0.6-customToolbar", true),
+};
+
+let _prop = {
+  p06defaultColor: GM_getValue("p0.6-defaultToolbarColor", "#e0b5ff"),
 };
 
 (function () {
@@ -739,6 +744,122 @@ let _setting = {
     });
   }
 
+  // 文章編輯器快速選項 - 選項 (v0.6.1)
+  function insertEditorToolbarOpt(customArea) {
+    const textarea = document.querySelector("textarea.FormControl.Composer-flexible");
+
+    // 通用：從游標位置插入文字
+    function insertAtCursor(value) {
+      let startPos = textarea.selectionStart;
+      let endPos = textarea.selectionEnd;
+      textarea.value = textarea.value.substring(0, startPos) +
+        value +
+        textarea.value.substring(endPos, textarea.value.length);
+
+      textarea.selectionEnd = endPos + value.length;
+      textarea.dispatchEvent(new Event("input"));
+    }
+
+    // 通用：偏移游標位置
+    function setCursorPositionByOffset(offset) {
+      let cursorPos = textarea.selectionStart;
+      let targetPos = cursorPos + offset;
+      textarea.focus();
+      textarea.setSelectionRange(targetPos, targetPos);
+    }
+
+    // 通用：根據游標位置取得前後偏移範圍文字
+    function getRangeTextByOffset(offsetStart, offsetEnd) {
+      let cursorPos = textarea.selectionStart;
+      return textarea.value.substring(cursorPos + offsetStart, cursorPos + offsetEnd);
+    }
+
+    // 通用：根據游標位置取得前後偏移範圍文字並刪除
+    function delRangeTextByOffset(offsetStart, offsetEnd) {
+      let cursorPos = textarea.selectionStart;
+      textarea.value = textarea.value.substring(0, cursorPos + offsetStart) + textarea.value.substring(cursorPos + offsetEnd, textarea.value.length);
+      textarea.dispatchEvent(new Event("input"));
+    }
+
+    // 通用：取得選取文字
+    function getSeletion() {
+      let startPos = textarea.selectionStart;
+      let endPos = textarea.selectionEnd;
+      let seletion = textarea.value.substring(startPos, endPos);
+
+      return seletion;
+    }
+
+    // 通用：在選取文字前後分別加上文字並將全體選取
+    function insTextBySeletion(startText, endText) {
+      let startPos = textarea.selectionStart;
+      let endPos = textarea.selectionEnd;
+      let seletion = textarea.value.substring(startPos, endPos);
+      textarea.value = textarea.value.substring(0, startPos) +
+        startText + seletion + endText +
+        textarea.value.substring(endPos, textarea.value.length);
+
+      textarea.dispatchEvent(new Event("input"));
+
+      let newStartPos = startPos;
+      if (newStartPos < 0) newStartPos = 0;
+      let newEndPos = endPos + startText.length + endText.length;
+      if (newEndPos > textarea.value.length) newEndPos = textarea.value.length;
+
+      if (textarea.setSelectionRange) {
+        textarea.focus();
+        textarea.setSelectionRange(newStartPos, newEndPos);
+      } else if (textarea.createTextRange) {
+        var range = textarea.createTextRange();
+        range.collapse(true);
+        range.moveEnd('character', newEndPos);
+        range.moveStart('character', newStartPos);
+        range.select();
+      }
+    }
+
+
+    // 功能：刪除線
+    function f_stroke() {
+      if (getSeletion() != "") {
+        let match = getSeletion().match(/~~(.+?)~~/);
+        if (match) {
+          insertAtCursor(match[1]);
+        } else {
+          insTextBySeletion("~~", "~~");
+        }
+      } else {
+        if (getRangeTextByOffset(-2, 2) == "~~~~") {
+          delRangeTextByOffset(-2, 2);
+        } else {
+          insertAtCursor("~~~~");
+          setCursorPositionByOffset(-2);
+        }
+      }
+    }
+
+    let customColor = _prop["p06defaultColor"];
+    let html = `
+      <button id="us06_stroke" class="Button Button--icon Button--link" title="刪除線"><i class="fas fa-strikethrough" style="color: ${customColor};"></i></button>
+      <button id="us06_img" class="Button Button--icon Button--link" title="用網址插入圖片"><i class="fas fa-image" style="color: ${customColor};"></i></button>
+      <button id="us06_palette" class="Button Button--icon Button--link" title="調色盤"><i class="fas fa-palette" style="color: ${customColor};"></i></button>
+    `;
+    customArea.innerHTML = html;
+
+    customArea.querySelector("#us06_stroke").onclick = f_stroke;
+
+    if (_setting["open03mention"]) {
+      let id = setInterval(() => {
+        if (document.querySelectorAll("button#us_tagByUid").length > 0) {
+          let btn03 = document.querySelector("button#us_tagByUid");
+          customArea.appendChild(btn03);
+          clearInterval(id);
+        }
+      }, 100);
+    }
+  }
+
+
   // timestamp -> YYYY-MM-DD[ HH:mm:ss]
   function datetimeFormat(timeString, dateOnly = false) {
     let d = new Date(timeString);
@@ -908,6 +1029,24 @@ let _setting = {
           }
         }, 100);
       }
+
+      // v0.6: 文章編輯器快速選項
+      setInterval(function () {
+        // 撰寫貼文框的下方功能列
+        let nodes = document.querySelectorAll("li.TextEditor-toolbar");
+        if (nodes.length > 0) {
+          let node = nodes[0];
+
+          if (node.querySelectorAll("div#us06_customArea").length == 0) {
+            // 不能用 innerHTML 添加，會破壞原生功能
+            node.insertAdjacentHTML("beforeend", `<div id="us06_customArea"></div>`);
+            let customArea = node.querySelector("div#us06_customArea");
+            addScript
+
+            insertEditorToolbarOpt(customArea);
+          }
+        }
+      }, 200);
     }
 
     // v0.6.0 識別
