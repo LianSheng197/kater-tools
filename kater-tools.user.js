@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.6.3
+// @version      0.6.4
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -895,7 +895,7 @@ let _prop = {
     customArea.querySelector("#us06_stroke").onclick = f_stroke;
     customArea.querySelector("#us06_img").onclick = f_img;
 
-    document.querySelector("li.item-discussionTitle").insertAdjacentHTML("beforebegin", `<li id="us06_placeholder"></li>`)
+    textarea.insertAdjacentHTML("beforebegin", `<li id="us06_placeholder"></li>`);
     let placeholder = document.querySelector("#us06_placeholder");
     let picker = new Picker(placeholder);
     picker.onDone = color => {
