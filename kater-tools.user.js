@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.6.1
+// @version      0.6.2
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -24,6 +24,10 @@
 
 // @license      MIT
 // ==/UserScript==
+
+// v0.6.0 識別
+let identification = `if (window._KT) { _KT["kater.tools"] = GM_info.script.version;} else { window._KT = {"kater.tools": "${GM_info.script.version}"}}`;
+addScript(identification, "head");
 
 const _setting = {
   open02overwrite: GM_getValue("s0.2-overwriteUserMention", true),
@@ -744,7 +748,7 @@ let _prop = {
     });
   }
 
-  // 文章編輯器快速選項 - 選項 (v0.6.1)
+  // 文章編輯器快速選項 - 選項 (v0.6)
   function insertEditorToolbarOpt(customArea) {
     const textarea = document.querySelector("textarea.FormControl.Composer-flexible");
 
@@ -838,6 +842,25 @@ let _prop = {
       }
     }
 
+    // 功能：用網址插入圖片
+    function f_img() {
+      if (getSeletion() != "") {
+        let match = getSeletion().match(/\[img\ ?.+?\](.+?)\[\/img\]/);
+        if(match){
+          insertAtCursor(match[1]);
+        } else {
+          insTextBySeletion("[img width=]", "[/img]");
+        }
+      } else {
+        if(getRangeTextByOffset(-12, 6) == "[img width=][/img]"){
+          delRangeTextByOffset(-12, 6);
+        }else{
+          insertAtCursor("[img width=][/img]");
+          setCursorPositionByOffset(-6);
+        }
+      }
+    }
+
     let customColor = _prop["p06defaultColor"];
     let html = `
       <button id="us06_stroke" class="Button Button--icon Button--link" title="刪除線"><i class="fas fa-strikethrough" style="color: ${customColor};"></i></button>
@@ -847,6 +870,7 @@ let _prop = {
     customArea.innerHTML = html;
 
     customArea.querySelector("#us06_stroke").onclick = f_stroke;
+    customArea.querySelector("#us06_img").onclick = f_img;
 
     if (_setting["open03mention"]) {
       let id = setInterval(() => {
@@ -1031,26 +1055,23 @@ let _prop = {
       }
 
       // v0.6: 文章編輯器快速選項
-      setInterval(function () {
-        // 撰寫貼文框的下方功能列
-        let nodes = document.querySelectorAll("li.TextEditor-toolbar");
-        if (nodes.length > 0) {
-          let node = nodes[0];
+      if (_setting["open06toolbar"]) {
+        setInterval(function () {
+          // 撰寫貼文框的下方功能列
+          let nodes = document.querySelectorAll("li.TextEditor-toolbar");
+          if (nodes.length > 0) {
+            let node = nodes[0];
 
-          if (node.querySelectorAll("div#us06_customArea").length == 0) {
-            // 不能用 innerHTML 添加，會破壞原生功能
-            node.insertAdjacentHTML("beforeend", `<div id="us06_customArea"></div>`);
-            let customArea = node.querySelector("div#us06_customArea");
-            addScript
+            if (node.querySelectorAll("div#us06_customArea").length == 0) {
+              // 不能用 innerHTML 添加，會破壞原生功能
+              node.insertAdjacentHTML("beforeend", `<div id="us06_customArea"></div>`);
+              let customArea = node.querySelector("div#us06_customArea");
 
-            insertEditorToolbarOpt(customArea);
+              insertEditorToolbarOpt(customArea);
+            }
           }
-        }
-      }, 200);
+        }, 200);
+      }
     }
-
-    // v0.6.0 識別
-    let identification = `if (window._KT) { _KT["kater.tools"] = GM_info.script.version;} else { window._KT = {"kater.tools": "${GM_info.script.version}"}}`;
-    addScript(identification, "head");
   })();
 })();
