@@ -846,17 +846,40 @@ let _prop = {
     function f_img() {
       if (getSeletion() != "") {
         let match = getSeletion().match(/\[img\ ?.+?\](.+?)\[\/img\]/);
-        if(match){
+        if (match) {
           insertAtCursor(match[1]);
         } else {
           insTextBySeletion("[img width=]", "[/img]");
         }
       } else {
-        if(getRangeTextByOffset(-12, 6) == "[img width=][/img]"){
+        if (getRangeTextByOffset(-12, 6) == "[img width=][/img]") {
           delRangeTextByOffset(-12, 6);
-        }else{
+        } else {
           insertAtCursor("[img width=][/img]");
           setCursorPositionByOffset(-6);
+        }
+      }
+    }
+
+    // 功能：調色盤
+    function f_palette(hex) {
+      if (getSeletion() != "") {
+        let match = getSeletion().match(/\[color=(.+?)\](.+?)\[\/color\]/);
+        if (match) {
+          if (hex == match[1]) {
+            insertAtCursor(match[2]);
+          } else {
+            insertAtCursor(`[color=${hex}]${match[2]}[/color]`);
+          }
+        } else {
+          insTextBySeletion(`[color=${hex}]`, "[/color]");
+        }
+      } else {
+        if (getRangeTextByOffset(-17, 8).match(/\[color=#[0-9a-f]{8}\]\[\/color\]/)) {
+          delRangeTextByOffset(-17, 8);
+        } else {
+          insertAtCursor(`[color=${hex}][/color]`);
+          setCursorPositionByOffset(-8);
         }
       }
     }
@@ -871,6 +894,17 @@ let _prop = {
 
     customArea.querySelector("#us06_stroke").onclick = f_stroke;
     customArea.querySelector("#us06_img").onclick = f_img;
+
+    document.querySelector("li.item-discussionTitle").insertAdjacentHTML("beforebegin", `<li id="us06_placeholder"></li>`)
+    let placeholder = document.querySelector("#us06_placeholder");
+    let picker = new Picker(placeholder);
+    picker.onDone = color => {
+      f_palette(color.hex);
+    };
+    customArea.querySelector("#us06_palette").onclick = () => {
+      placeholder.click();
+    };
+
 
     if (_setting["open03mention"]) {
       let id = setInterval(() => {
