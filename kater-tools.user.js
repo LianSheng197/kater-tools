@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Kater Tools
 // @namespace    -
-// @version      0.6.4
+// @version      0.7.0
 // @description  切換界面語系，覆寫「@某人」的連結（避免找不到資源的錯誤），用 UID 取得可標註其他使用者的文字、使用者頁面貼文排序、使用者頁面討論排序與搜尋
 // @author       LianSheng
 
@@ -19,7 +19,7 @@
 // @noframes
 
 // @require      https://greasyfork.org/scripts/402133-toolbox/code/Toolbox.js
-// @require      https://cdn.jsdelivr.net/npm/pikaday/pikaday.js
+// @require      https://cdnjs.cloudflare.com/ajax/libs/pikaday/1.6.0/pikaday.min.js
 // @require      https://unpkg.com/vanilla-picker@2
 
 // @license      MIT
@@ -255,7 +255,7 @@ let _prop = {
         name: "最舊"
       }
     };
-    let uid = app.current.user.data.id;
+    let uid = app.current.data.user.data.id;
     let sortList = document.querySelectorAll("div#us_userPageOptionTop ul button");
     let selected = document.querySelector("div#us_userPageOptionTop button.Dropdown-toggle > span");
 
@@ -315,14 +315,6 @@ let _prop = {
       link: "commentCount",
       name: "乏人問津"
     },
-    maxView: {
-      link: "-view_count",
-      name: "最多瀏覽"
-    },
-    minView: {
-      link: "view_count",
-      name: "最少瀏覽"
-    },
   };
 
   // 個人頁面排序討論 (v0.5.6)
@@ -340,8 +332,8 @@ let _prop = {
     let search = document.querySelector("div#us_userPageOptionTop input[type=search]").value;
     let sortName = document.querySelector("div#us_userPageOptionTop ul button[active=true]").getAttribute("data-sort");
     let sort = sortField[sortName]["link"];
-    let uid = app.current.user.data.id;
-    let name = app.current.user.data.attributes.username;
+    let uid = app.current.data.user.data.id;
+    let name = app.current.data.user.data.attributes.username;
 
     let url = `https://kater.me/api/discussions?filter[user]=${uid}&filter[q]=${tagString}${search} author:${name} created:${dateStart}..${dateEnd}&sort=${sort}&page[offset]=${offset}`;
 
@@ -410,8 +402,8 @@ let _prop = {
           `;
         });
 
-        if (discussion.relationships.recipientUsers.data.length > 0) {
-          discussion.relationships.recipientUsers.data.forEach(function (user) {
+        if (discussion.relationships.user.data.length > 0) {
+          discussion.relationships.user.data.forEach(function (user) {
             recipient += `
               <span class="RecipientLabel">
                 <span class="RecipientLabel-text">
@@ -483,7 +475,7 @@ let _prop = {
       message("請求已完成", 0);
     }).catch(function (e) {
       message("取得資料時遇到錯誤！", 2);
-      throw new Error(e);
+      console.error(e);
     });
   }
 
@@ -886,16 +878,15 @@ let _prop = {
 
     let customColor = _prop["p06defaultColor"];
     let html = `
-      <button id="us06_stroke" class="Button Button--icon Button--link" title="刪除線"><i class="fas fa-strikethrough" style="color: ${customColor};"></i></button>
+      <!-- v0.7.0 刪除線功能已存在於原生介面，故移除 -->
       <button id="us06_img" class="Button Button--icon Button--link" title="用網址插入圖片"><i class="fas fa-image" style="color: ${customColor};"></i></button>
       <button id="us06_palette" class="Button Button--icon Button--link" title="調色盤"><i class="fas fa-palette" style="color: ${customColor};"></i></button>
     `;
     customArea.innerHTML = html;
 
-    customArea.querySelector("#us06_stroke").onclick = f_stroke;
     customArea.querySelector("#us06_img").onclick = f_img;
 
-    textarea.insertAdjacentHTML("beforebegin", `<li id="us06_placeholder"></li>`);
+    textarea.insertAdjacentHTML("beforebegin", `<li id="us06_placeholder" style="list-style-type: none; bottom: 20px"></li>`);
     let placeholder = document.querySelector("#us06_placeholder");
     let picker = new Picker(placeholder);
     picker.onDone = color => {
